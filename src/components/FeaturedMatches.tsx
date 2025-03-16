@@ -104,7 +104,10 @@ const FeaturedMatches = () => {
                   isVisible ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4'
                 }`}
               >
-                <MatchCard match={match} featured />
+                <MatchCard match={{
+                  ...match,
+                  status: match.status as "upcoming" | "live" | "completed"
+                }} featured />
               </div>
             ))}
           </div>
