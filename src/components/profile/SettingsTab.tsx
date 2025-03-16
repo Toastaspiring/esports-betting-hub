@@ -4,8 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { LogOut } from 'lucide-react';
-import { RiotAccount } from './RiotAccount';
-import { RiotApiResponse } from '@/types/riotTypes';
 
 interface SettingsTabProps {
   user: any;
@@ -27,11 +25,6 @@ export const SettingsTab = ({
   username, 
   setUsername, 
   profile, 
-  riotId, 
-  setRiotId, 
-  riotData, 
-  hasSummoner,
-  onRefetch, 
   onSaveProfile, 
   onSignOut, 
   isLoading 
@@ -67,20 +60,6 @@ export const SettingsTab = ({
               </Button>
             </div>
           </div>
-        </div>
-        
-        <Separator />
-        
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Riot Games Account</h3>
-          
-          <RiotAccount 
-            riotId={profile?.riot_id || riotId}
-            setRiotId={setRiotId}
-            riotData={riotData}
-            hasSummoner={hasSummoner}
-            onSuccess={onRefetch}
-          />
         </div>
         
         <Separator />
