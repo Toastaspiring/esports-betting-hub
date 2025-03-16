@@ -1,11 +1,36 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X, User, Trophy, Wallet } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, User, Trophy, Wallet, LogOut } from 'lucide-react';
 import { MOCK_USER } from '@/lib/constants';
+import { useSupabase } from '@/hooks/useSupabase';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, session } = useSupabase();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Logout failed",
+        description: "An error occurred during logout",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <header className="fixed top-0 left-0 right-0 z-50 py-4 glass-panel backdrop-blur-xl bg-white/70 border-b border-slate-200/50">
@@ -42,21 +67,52 @@ const Navbar = () => {
 
           {/* User Section */}
           <div className="hidden md:flex items-center space-x-4">
-            <div className="flex items-center px-3 py-1.5 rounded-full bg-secondary">
-              <Wallet className="w-4 h-4 text-primary mr-2" />
-              <span className="text-sm font-medium">{MOCK_USER.balance.toLocaleString()} LP</span>
-            </div>
-            
-            <Link to="/profile" className="flex items-center space-x-2 p-1.5 -mr-1.5 rounded-full hover:bg-slate-100 transition-colors">
-              <div className="relative">
-                <img 
-                  src={MOCK_USER.avatar} 
-                  alt={MOCK_USER.username}
-                  className="w-8 h-8 rounded-full border border-slate-200 object-cover" 
-                />
-                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></span>
+            {user ? (
+              <>
+                <Link to="/my-bets" className="font-medium text-sm text-foreground/80 hover:text-primary transition-colors">
+                  My Bets
+                </Link>
+                <div className="flex items-center px-3 py-1.5 rounded-full bg-secondary">
+                  <Wallet className="w-4 h-4 text-primary mr-2" />
+                  <span className="text-sm font-medium">{MOCK_USER.balance.toLocaleString()} LP</span>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Link to="/profile" className="flex items-center space-x-2 p-1.5 -mr-1.5 rounded-full hover:bg-slate-100 transition-colors">
+                    <div className="relative">
+                      <img 
+                        src={MOCK_USER.avatar} 
+                        alt={user.email || "User"}
+                        className="w-8 h-8 rounded-full border border-slate-200 object-cover" 
+                      />
+                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></span>
+                    </div>
+                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleLogout}
+                    className="text-slate-500 hover:text-slate-700"
+                    aria-label="Logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link to="/login">
+                  <Button variant="outline" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button size="sm">
+                    Register
+                  </Button>
+                </Link>
               </div>
-            </Link>
+            )}
           </div>
 
           {/* Mobile Navigation Toggle */}
@@ -103,27 +159,71 @@ const Navbar = () => {
               How It Works
             </Link>
             
-            <div className="border-t border-slate-200 pt-3 mt-2 flex items-center justify-between">
-              <div className="flex items-center">
-                <img 
-                  src={MOCK_USER.avatar} 
-                  alt={MOCK_USER.username}
-                  className="w-8 h-8 rounded-full border border-slate-200 mr-3" 
-                />
-                <div>
-                  <p className="text-sm font-medium">{MOCK_USER.username}</p>
-                  <p className="text-xs text-muted-foreground">{MOCK_USER.balance.toLocaleString()} LP</p>
+            {user ? (
+              <>
+                <Link 
+                  to="/my-bets" 
+                  className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-slate-100 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  My Bets
+                </Link>
+                
+                <div className="border-t border-slate-200 pt-3 mt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <img 
+                        src={MOCK_USER.avatar} 
+                        alt={user.email || "User"}
+                        className="w-8 h-8 rounded-full border border-slate-200 mr-3" 
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{user.email}</p>
+                        <p className="text-xs text-muted-foreground">{MOCK_USER.balance.toLocaleString()} LP</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Link 
+                        to="/profile" 
+                        className="p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <User className="w-5 h-5" />
+                      </Link>
+                      
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsOpen(false);
+                        }}
+                        className="p-2 rounded-md text-slate-500 hover:bg-slate-100 transition-colors"
+                        aria-label="Logout"
+                      >
+                        <LogOut className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              </>
+            ) : (
+              <div className="border-t border-slate-200 pt-3 mt-2 flex flex-col space-y-2">
+                <Link 
+                  to="/login" 
+                  className="py-2 px-3 rounded-md text-sm font-medium text-center bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/login" 
+                  className="py-2 px-3 rounded-md text-sm font-medium text-center bg-primary text-white hover:bg-primary/90 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Register
+                </Link>
               </div>
-              
-              <Link 
-                to="/profile" 
-                className="p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                <User className="w-5 h-5" />
-              </Link>
-            </div>
+            )}
           </div>
         </div>
       )}
