@@ -31,7 +31,7 @@ const hasValidSummoner = (data: any): data is RiotData => {
 };
 
 const Profile = () => {
-  const { user, isMockSession, mockProfile } = useSupabase();
+  const { user, isMockSession, mockProfile, setMockSession } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
@@ -130,6 +130,15 @@ const Profile = () => {
   
   const handleSignOut = async () => {
     try {
+      console.log('Profile page: Signing out...');
+      
+      if (isMockSession) {
+        // For mock sessions, just clear the mock session
+        setMockSession(null);
+        navigate('/');
+        return;
+      }
+      
       await signOut();
       navigate('/');
     } catch (error) {

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Match, Team, League, User } from "@/lib/constants";
 
@@ -22,13 +23,24 @@ export const signUp = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
+  // Check if this is a mock session
+  const localStorageSession = localStorage.getItem('mockSession');
+  if (localStorageSession) {
+    // Clear mock session from localStorage
+    localStorage.removeItem('mockSession');
+    // Force a refresh to ensure clean state
+    window.location.href = '/';
+    return { success: true };
+  }
+  
+  // If it's a real session, proceed with regular sign out
   const { error } = await supabase.auth.signOut();
   
   // If there was an error during sign out, throw it
   if (error) throw error;
   
-  // Force a refresh of the authentication state
-  const { data } = await supabase.auth.getSession();
+  // Force a refresh of the page to clear any remaining state
+  window.location.href = '/';
   
   return { success: true };
 };

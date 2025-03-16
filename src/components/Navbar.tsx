@@ -8,10 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { parseRiotData } from '@/services/profileService';
+import { signOut } from '@/services/supabaseService';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, refreshAuth } = useSupabase();
+  const { user, refreshAuth, setMockSession, isMockSession } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -55,22 +56,17 @@ const Navbar = () => {
   
   const handleLogout = async () => {
     try {
-      console.log('Logging out...');
+      console.log('Navbar: Logging out...');
       setIsOpen(false);
       
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Error during logout:', error);
-        throw error;
+      if (isMockSession) {
+        setMockSession(null);
+        navigate('/');
+        return;
       }
       
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
-      
-      window.location.href = '/';
+      await signOut();
+      navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);
       toast({
