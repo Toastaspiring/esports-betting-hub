@@ -9,12 +9,67 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 
 const MyBets = () => {
-  const { session } = useSupabase();
+  const { session, user, isMockSession } = useSupabase();
   
   const { data: bets, isLoading } = useQuery({
-    queryKey: ["my-bets", session?.user?.id],
+    queryKey: ["my-bets", user?.id, isMockSession],
     queryFn: async () => {
-      if (!session?.user?.id) return [];
+      if (!user?.id) return [];
+      
+      // For mock sessions, return mock bets
+      if (isMockSession) {
+        console.log("Using mock bets for MyBets page");
+        return [
+          { 
+            id: 'mock-bet-1', 
+            status: 'won', 
+            match_id: 'mock-match-1',
+            matches: {
+              team1: 'T1',
+              team2: 'Gen.G',
+              match_date: new Date().toISOString()
+            },
+            created_at: new Date().toISOString(),
+            amount: 1500,
+            odds: 2.5,
+            potential_win: 3750,
+            bet_type: 'Team Win',
+            user_id: user.id
+          },
+          { 
+            id: 'mock-bet-2', 
+            status: 'lost', 
+            match_id: 'mock-match-2',
+            matches: {
+              team1: 'G2',
+              team2: 'Fnatic',
+              match_date: new Date(Date.now() - 86400000).toISOString()
+            },
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            amount: 1000,
+            odds: 1.8,
+            potential_win: 1800,
+            bet_type: 'First Blood',
+            user_id: user.id
+          },
+          { 
+            id: 'mock-bet-3', 
+            status: 'pending', 
+            match_id: 'mock-match-3',
+            matches: {
+              team1: 'Top Esports',
+              team2: 'JD Gaming',
+              match_date: new Date(Date.now() + 86400000).toISOString()
+            },
+            created_at: new Date(Date.now() - 172800000).toISOString(),
+            amount: 2000,
+            odds: 3.2,
+            potential_win: 6400,
+            bet_type: 'First Dragon',
+            user_id: user.id
+          }
+        ];
+      }
       
       const { data, error } = await supabase
         .from("bets")
@@ -22,16 +77,16 @@ const MyBets = () => {
           *,
           matches:match_id(*)
         `)
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
         
       if (error) throw error;
       return data || [];
     },
-    enabled: !!session?.user?.id,
+    enabled: !!user?.id,
   });
 
-  if (!session) {
+  if (!session && !isMockSession) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />

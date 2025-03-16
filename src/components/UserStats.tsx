@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const UserStats = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const { user } = useSupabase();
+  const { user, isMockSession, mockProfile } = useSupabase();
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -19,9 +19,15 @@ const UserStats = () => {
 
   // Fetch user profile data from Supabase
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['userProfile', user?.id],
+    queryKey: ['userProfile', user?.id, isMockSession],
     queryFn: async () => {
       if (!user) return null;
+      
+      // Return mock profile if using mock session
+      if (isMockSession && mockProfile) {
+        console.log('Using mock profile data for UserStats', mockProfile);
+        return mockProfile;
+      }
       
       const { data, error } = await supabase
         .from('profiles')

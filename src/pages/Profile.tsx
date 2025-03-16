@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -30,7 +31,7 @@ const hasValidSummoner = (data: any): data is RiotData => {
 };
 
 const Profile = () => {
-  const { user } = useSupabase();
+  const { user, isMockSession, mockProfile } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
@@ -38,9 +39,15 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { data: profile, isLoading: profileLoading, refetch } = useQuery({
-    queryKey: ['profileDetails', user?.id],
+    queryKey: ['profileDetails', user?.id, isMockSession],
     queryFn: async () => {
       if (!user) return null;
+      
+      // Return mock profile for mock sessions to avoid database calls
+      if (isMockSession && mockProfile) {
+        console.log('Using mock profile data', mockProfile);
+        return mockProfile;
+      }
       
       const { data, error } = await supabase
         .from('profiles')
@@ -55,9 +62,46 @@ const Profile = () => {
   });
   
   const { data: bets } = useQuery({
-    queryKey: ['userBets', user?.id],
+    queryKey: ['userBets', user?.id, isMockSession],
     queryFn: async () => {
       if (!user) return [];
+      
+      // Return mock bets for mock sessions
+      if (isMockSession) {
+        console.log('Using mock bets data');
+        return [
+          { 
+            id: 'mock-bet-1', 
+            status: 'won', 
+            match_id: 'mock-match-1', 
+            created_at: new Date().toISOString(),
+            amount: 1500,
+            odds: 2.5,
+            potential_win: 3750,
+            user_id: user.id
+          },
+          { 
+            id: 'mock-bet-2', 
+            status: 'lost', 
+            match_id: 'mock-match-2', 
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            amount: 1000,
+            odds: 1.8,
+            potential_win: 1800,
+            user_id: user.id
+          },
+          { 
+            id: 'mock-bet-3', 
+            status: 'pending', 
+            match_id: 'mock-match-3', 
+            created_at: new Date(Date.now() - 172800000).toISOString(),
+            amount: 2000,
+            odds: 3.2,
+            potential_win: 6400,
+            user_id: user.id
+          }
+        ];
+      }
       
       const { data, error } = await supabase
         .from('bets')
@@ -103,6 +147,16 @@ const Profile = () => {
     
     setIsLoading(true);
     try {
+      // Skip database update for mock sessions
+      if (isMockSession) {
+        toast({
+          title: "Profile Updated",
+          description: "Mock profile has been updated (simulation).",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       const { error } = await supabase
         .from('profiles')
         .update({ username })

@@ -17,17 +17,32 @@ export const useSampleLogin = () => {
     try {
       console.log("Using mock login with sample data...");
       
+      // Create a complete mock profile with all necessary fields
+      const mockProfile = {
+        ...MOCK_USER,
+        id: 'mock-user-id',
+        username: 'TestUser',
+        email: 'test@example.com',
+        avatar: 'https://i.pravatar.cc/150?img=68',
+        bio: 'This is a sample account for demonstration purposes.',
+        riot_id: 'sample#NA1',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        balance: 5000,
+        bets_won: 42,
+        bets_lost: 20,
+        riot_data: null,
+        is_admin: false,
+        region: 'NA'
+      };
+      
       // Create a mock session instead of actual authentication
       await setMockSession({
         user: {
           id: 'mock-user-id',
           email: 'test@example.com',
         },
-        mockProfile: {
-          ...MOCK_USER,
-          id: 'mock-user-id',
-          username: 'TestUser',
-        }
+        mockProfile
       });
       
       console.log("Successfully logged in with mock user data");
