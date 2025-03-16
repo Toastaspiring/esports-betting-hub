@@ -14,6 +14,7 @@ import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
 import MyBets from "@/pages/MyBets";
 import Tournament from "@/pages/Tournament";
+import Contact from "@/pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/tournament/:id" element={<Tournament />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Login />} />

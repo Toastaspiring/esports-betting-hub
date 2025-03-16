@@ -1,7 +1,6 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { signIn, signUp } from '@/services/supabaseService';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,10 +44,20 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formSuccess, setFormSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('login');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.pathname.includes('register') ? 'register' : 'login';
+  });
   const { user } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  useEffect(() => {
+    const path = activeTab === 'register' ? '/register' : '/login';
+    if (location.pathname !== path) {
+      navigate(path, { replace: true });
+    }
+  }, [activeTab, navigate, location.pathname]);
   
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

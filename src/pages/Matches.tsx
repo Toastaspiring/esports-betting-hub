@@ -8,20 +8,25 @@ import { Loader2, Search } from 'lucide-react';
 import { MOCK_MATCHES } from '@/lib/constants';
 import MatchCard from '@/components/MatchCard';
 import { fetchMatches } from '@/services/supabaseService';
+import { Button } from '@/components/ui/button';
+import { seedDatabase } from '@/lib/seedDatabase';
+import { useToast } from '@/components/ui/use-toast';
 
 const Matches = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { toast } = useToast();
   
   // Fetch matches data
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['matches'],
     queryFn: fetchMatches,
   });
   
-  const matches = data?.data || MOCK_MATCHES;
+  // Use mock data if no matches are returned from the database
+  const matchesData = (data?.data && data.data.length > 0) ? data.data : MOCK_MATCHES;
   
   // Filter matches based on search query
-  const filteredMatches = matches.filter(match => 
+  const filteredMatches = matchesData.filter(match => 
     match.teamA.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     match.teamB.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     match.league.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -30,6 +35,20 @@ const Matches = () => {
   const upcomingMatches = filteredMatches.filter(match => match.status === 'upcoming');
   const liveMatches = filteredMatches.filter(match => match.status === 'live');
   const completedMatches = filteredMatches.filter(match => match.status === 'completed');
+  
+  const handleSeedDatabase = async () => {
+    try {
+      await seedDatabase();
+      refetch();
+    } catch (error) {
+      console.error("Error seeding database:", error);
+      toast({
+        title: "Error",
+        description: "Failed to seed database. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -44,18 +63,30 @@ const Matches = () => {
             </p>
           </div>
           
-          {/* Search Bar */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 text-muted-foreground" />
+          {/* Search and Seed Database */}
+          <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <input
+                type="text"
+                className="bg-background border border-input rounded-md pl-10 p-2 w-full md:max-w-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Search teams or tournaments..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-            <input
-              type="text"
-              className="bg-background border border-input rounded-md pl-10 p-2 w-full md:max-w-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Search teams or tournaments..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            
+            {(!data?.data || data.data.length === 0) && (
+              <Button 
+                variant="outline" 
+                onClick={handleSeedDatabase}
+                className="shrink-0"
+              >
+                Seed Database
+              </Button>
+            )}
           </div>
           
           {/* Error State */}
