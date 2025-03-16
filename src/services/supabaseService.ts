@@ -55,7 +55,14 @@ export const fetchLeagues = async () => {
     .select('*');
   
   if (error) throw error;
-  return { data };
+  
+  // Add region property if it doesn't exist
+  const enhancedData = data?.map(league => ({
+    ...league,
+    region: league.region || 'Unknown'
+  }));
+  
+  return { data: enhancedData };
 };
 
 export const fetchLeagueDetails = async (leagueId: string) => {
@@ -66,10 +73,15 @@ export const fetchLeagueDetails = async (leagueId: string) => {
     .single();
   
   if (error) throw error;
-  return data;
+  
+  // Add region property if it doesn't exist
+  return {
+    ...data,
+    region: data.region || 'Unknown'
+  };
 };
 
-export const createLeague = async (league: { name: string, logo: string }) => {
+export const createLeague = async (league: { name: string, logo: string, region?: string }) => {
   const { data, error } = await supabase
     .from('leagues')
     .insert(league)
@@ -147,13 +159,13 @@ export const fetchMatches = async (status?: string) => {
       id: match.league.id,
       name: match.league.name,
       logo: match.league.logo,
-      region: 'Unknown' // We don't have region in our schema yet
+      region: match.league.region || 'Unknown' // Add default value for region
     },
     odds: {
       teamA: match.odds_team_a,
       teamB: match.odds_team_b
     },
-    status: match.status
+    status: match.status as 'upcoming' | 'live' | 'completed'
   }));
   
   return { data: transformedData || [] };
@@ -192,13 +204,13 @@ export const fetchMatchesByLeague = async (leagueId: string) => {
       id: match.league.id,
       name: match.league.name,
       logo: match.league.logo,
-      region: 'Unknown' // We don't have region in our schema yet
+      region: match.league.region || 'Unknown' // Add default value for region
     },
     odds: {
       teamA: match.odds_team_a,
       teamB: match.odds_team_b
     },
-    status: match.status
+    status: match.status as 'upcoming' | 'live' | 'completed'
   }));
   
   return transformedData || [];

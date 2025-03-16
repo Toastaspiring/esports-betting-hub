@@ -10,6 +10,7 @@ import MatchCard from '@/components/MatchCard';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import TournamentBracket from '@/components/TournamentBracket';
+import { Match } from '@/lib/constants';
 
 const Tournament = () => {
   const { id } = useParams();
@@ -28,7 +29,7 @@ const Tournament = () => {
   
   // Fetch matches for this tournament
   const { 
-    data: matches, 
+    data: matchesData, 
     isLoading: matchesLoading,
     error: matchesError
   } = useQuery({
@@ -36,6 +37,12 @@ const Tournament = () => {
     queryFn: () => fetchMatchesByLeague(id as string),
     enabled: !!id
   });
+  
+  // Cast the matches data to the correct type
+  const matches = matchesData ? matchesData.map(match => ({
+    ...match,
+    status: match.status as 'upcoming' | 'live' | 'completed'
+  })) as Match[] : [];
   
   // Group matches by status
   const upcomingMatches = matches?.filter(match => match.status === 'upcoming') || [];
@@ -102,7 +109,7 @@ const Tournament = () => {
         </div>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{tournament.name}</h1>
-          <p className="text-muted-foreground mt-1">{tournament.region} Regional Tournament</p>
+          <p className="text-muted-foreground mt-1">{tournament.region || 'Unknown'} Regional Tournament</p>
           
           <div className="flex items-center gap-4 mt-4">
             <div className="flex items-center text-muted-foreground">
@@ -142,7 +149,7 @@ const Tournament = () => {
             </CardHeader>
             <CardContent>
               {completedMatches.length > 0 ? (
-                <TournamentBracket matches={matches || []} />
+                <TournamentBracket matches={matches} />
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <Trophy className="mx-auto h-12 w-12 mb-4 opacity-20" />
