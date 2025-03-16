@@ -16,6 +16,21 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { linkRiotAccount, refreshRiotAccountData } from '@/services/riotService';
 
+interface RiotSummoner {
+  profileIconId?: number;
+  summonerLevel?: number;
+  [key: string]: any;
+}
+
+interface RiotData {
+  summoner?: RiotSummoner;
+  [key: string]: any;
+}
+
+const hasValidSummoner = (data: any): data is RiotData => {
+  return !!data && typeof data === 'object' && 'summoner' in data && !!data.summoner;
+};
+
 const Profile = () => {
   const { user } = useSupabase();
   const navigate = useNavigate();
@@ -175,6 +190,9 @@ const Profile = () => {
   const pendingBets = bets?.filter(bet => bet.status === 'pending') || [];
   const lostBets = bets?.filter(bet => bet.status === 'lost') || [];
   
+  const riotData = profile?.riot_data as RiotData | undefined;
+  const hasSummoner = hasValidSummoner(riotData);
+  
   if (profileLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -209,9 +227,9 @@ const Profile = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center text-center">
                 <Avatar className="h-20 w-20 mb-4">
-                  {profile?.riot_data?.summoner?.profileIconId ? (
+                  {hasSummoner && riotData.summoner.profileIconId ? (
                     <AvatarImage 
-                      src={`https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${profile.riot_data.summoner.profileIconId}.png`} 
+                      src={`https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${riotData.summoner.profileIconId}.png`} 
                       alt="Profile" 
                     />
                   ) : (
@@ -261,9 +279,9 @@ const Profile = () => {
                       </div>
                     ) : null}
                     
-                    {profile?.riot_data?.summoner ? (
+                    {hasSummoner ? (
                       <div className="mt-2 text-xs text-muted-foreground">
-                        Summoner Level: {profile.riot_data.summoner.summonerLevel}
+                        Summoner Level: {riotData.summoner.summonerLevel}
                       </div>
                     ) : null}
                     
@@ -514,9 +532,9 @@ const Profile = () => {
                               </div>
                               <AlertDescription>
                                 Your Riot Games account is connected: <strong>{profile.riot_id}</strong>
-                                {profile.riot_data?.summoner && (
+                                {hasSummoner && (
                                   <div className="mt-1 text-sm">
-                                    Summoner Level: {profile.riot_data.summoner.summonerLevel}
+                                    Summoner Level: {riotData.summoner.summonerLevel}
                                   </div>
                                 )}
                               </AlertDescription>
