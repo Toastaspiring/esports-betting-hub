@@ -1,5 +1,6 @@
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
+import { useSupabase } from '@/hooks/useSupabase';
 
 interface OverviewTabProps {
   bets: any[];
@@ -7,9 +8,38 @@ interface OverviewTabProps {
 }
 
 export const OverviewTab = ({ bets, profile }: OverviewTabProps) => {
-  const wonBets = bets?.filter(bet => bet.status === 'won') || [];
-  const pendingBets = bets?.filter(bet => bet.status === 'pending') || [];
-  const lostBets = bets?.filter(bet => bet.status === 'lost') || [];
+  const { isMockSession } = useSupabase();
+  
+  // For mock sessions with no bets, provide sample bets
+  const effectiveBets = isMockSession && (!bets || bets.length === 0) 
+    ? [
+        { 
+          id: 'mock-bet-1', 
+          status: 'won', 
+          match_id: 'mock-match-1', 
+          created_at: new Date().toISOString(),
+          amount: 1500
+        },
+        { 
+          id: 'mock-bet-2', 
+          status: 'lost', 
+          match_id: 'mock-match-2', 
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          amount: 1000
+        },
+        { 
+          id: 'mock-bet-3', 
+          status: 'pending', 
+          match_id: 'mock-match-3', 
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          amount: 2000
+        }
+      ]
+    : bets || [];
+  
+  const wonBets = effectiveBets.filter(bet => bet.status === 'won') || [];
+  const pendingBets = effectiveBets.filter(bet => bet.status === 'pending') || [];
+  const lostBets = effectiveBets.filter(bet => bet.status === 'lost') || [];
   
   const winRate = profile?.bets_won && (profile.bets_won + profile.bets_lost) > 0
     ? profile.bets_won / (profile.bets_won + profile.bets_lost)
@@ -23,7 +53,7 @@ export const OverviewTab = ({ bets, profile }: OverviewTabProps) => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Bets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{bets?.length || 0}</div>
+            <div className="text-2xl font-bold">{effectiveBets.length}</div>
             <div className="text-xs text-muted-foreground mt-1">
               {wonBets.length} won / {lostBets.length} lost / {pendingBets.length} pending
             </div>
@@ -64,9 +94,9 @@ export const OverviewTab = ({ bets, profile }: OverviewTabProps) => {
           <CardDescription>Your latest betting activities</CardDescription>
         </CardHeader>
         <CardContent>
-          {bets && bets.length > 0 ? (
+          {effectiveBets.length > 0 ? (
             <div className="space-y-4">
-              {bets.slice(0, 5).map((bet) => (
+              {effectiveBets.slice(0, 5).map((bet) => (
                 <div key={bet.id} className="flex justify-between items-center p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">Bet on Match #{bet.match_id.substring(0, 6)}</p>
@@ -99,7 +129,7 @@ export const OverviewTab = ({ bets, profile }: OverviewTabProps) => {
             </div>
           )}
         </CardContent>
-        {bets && bets.length > 5 && (
+        {effectiveBets.length > 5 && (
           <CardFooter>
             <a 
               href="/my-bets" 

@@ -7,6 +7,7 @@ import { Edit, LogOut, Wallet, Trophy, BarChart2, Award } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 
 interface ProfileSidebarProps {
   user: any;
@@ -29,12 +30,24 @@ export const ProfileSidebar = ({
   const [username, setUsername] = useState(profile?.username || "");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { isMockSession } = useSupabase();
 
   const handleSaveProfile = async () => {
     if (!user) return;
     
     setIsLoading(true);
     try {
+      // Skip database update for mock sessions
+      if (isMockSession) {
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been successfully updated (mock data).",
+        });
+        setEditMode(false);
+        setIsLoading(false);
+        return;
+      }
+      
       const { error } = await supabase
         .from('profiles')
         .update({ username })
@@ -149,6 +162,12 @@ export const ProfileSidebar = ({
           <>
             <h2 className="text-xl font-semibold">{displayName}</h2>
             <p className="text-muted-foreground text-sm mt-1">{user?.email}</p>
+            
+            {isMockSession && (
+              <div className="mt-2 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-xs font-medium">
+                Mock Session
+              </div>
+            )}
             
             {riotIdDisplay ? (
               <div className="mt-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">

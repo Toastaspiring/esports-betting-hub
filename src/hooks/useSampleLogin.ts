@@ -1,45 +1,36 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useSupabase } from '@/hooks/useSupabase';
+import { MOCK_USER } from '@/lib/constants';
 
 export const useSampleLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshAuth } = useSupabase();
+  const { setMockSession } = useSupabase();
 
   const handleSampleLogin = async () => {
     setIsLoading(true);
     
     try {
-      // Email and password for our pre-created test account
-      const testEmail = "test@example.com";
-      const testPassword = "Test123456!";
-
-      console.log("Attempting to sign in with test account...");
+      console.log("Using mock login with sample data...");
       
-      // Sign in with the pre-created test account
-      const { data: userData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: testEmail,
-        password: testPassword,
+      // Create a mock session instead of actual authentication
+      await setMockSession({
+        user: {
+          id: 'mock-user-id',
+          email: 'test@example.com',
+        },
+        mockProfile: {
+          ...MOCK_USER,
+          id: 'mock-user-id',
+          username: 'TestUser',
+        }
       });
       
-      if (signInError) {
-        console.error("Sample login sign-in error:", signInError);
-        throw new Error(`Unable to login with sample data: ${signInError.message}`);
-      }
-      
-      if (!userData?.user) {
-        throw new Error("Failed to get user data");
-      }
-      
-      console.log("Successfully logged in with test account:", userData.user.id);
-      
-      // Manually refresh the auth context to make sure app recognizes the user is logged in
-      await refreshAuth();
+      console.log("Successfully logged in with mock user data");
       
       toast({
         title: "Sample Login Successful",
