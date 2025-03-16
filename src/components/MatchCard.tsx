@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { Match } from '@/lib/constants';
 import { Calendar, Clock, TrendingUp } from 'lucide-react';
 import BettingInterface from './BettingInterface';
+import { useSupabase } from '@/hooks/useSupabase';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface MatchCardProps {
   match: Match;
@@ -12,6 +15,9 @@ interface MatchCardProps {
 const MatchCard = ({ match, featured = false }: MatchCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showBettingInterface, setShowBettingInterface] = useState(false);
+  const { user } = useSupabase();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Format date
   const matchDate = new Date(match.date);
@@ -26,6 +32,16 @@ const MatchCard = ({ match, featured = false }: MatchCardProps) => {
   });
   
   const handleOpenBetting = () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to place bets",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
+    
     setShowBettingInterface(true);
   };
   
@@ -132,11 +148,20 @@ const MatchCard = ({ match, featured = false }: MatchCardProps) => {
           {/* Bet Button - Only visible on featured matches or on hover */}
           <div className={`mt-4 transition-all duration-300 ${!featured && !isHovered ? 'opacity-0' : 'opacity-100'}`}>
             <button 
-              className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors"
+              className={`w-full py-2 px-4 ${
+                !user 
+                  ? 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' 
+                  : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+              } text-sm font-medium rounded-md transition-colors`}
               onClick={handleOpenBetting}
               disabled={match.status === 'completed'}
             >
-              {match.status === 'completed' ? 'Match Ended' : 'Place Bet'}
+              {match.status === 'completed' 
+                ? 'Match Ended' 
+                : user 
+                  ? 'Place Bet' 
+                  : 'Login to Bet'
+              }
             </button>
           </div>
         </div>
