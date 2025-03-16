@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -178,5 +179,131 @@ const Login = () => {
                       <FormField
                         control={loginForm.control}
                         name="email"
-                       
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="you@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                    <CardFooter className="flex flex-col space-y-2">
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Please wait
+                          </>
+                        ) : "Sign In"}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Form>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="register">
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle>Create an account</CardTitle>
+                  <CardDescription>
+                    Enter your details to create your account
+                  </CardDescription>
+                </CardHeader>
+                
+                {formSuccess && (
+                  <Alert className="mb-4 mx-6 bg-green-50 text-green-700 border-green-100">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <AlertDescription>{formSuccess}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <Form {...registerForm}>
+                  <form onSubmit={registerForm.handleSubmit(handleSignUp)}>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={registerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="you@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                    <CardFooter className="flex flex-col space-y-2">
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Please wait
+                          </>
+                        ) : "Create Account"}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Form>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </>
+  );
+};
 
+export default Login;
