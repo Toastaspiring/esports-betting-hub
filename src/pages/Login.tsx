@@ -13,7 +13,7 @@ import { RiotApiResponse } from '@/types/riotTypes';
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSampleLoading, setIsSampleLoading] = useState(false);
-  const { user } = useSupabase();
+  const { user, refreshAuth } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -57,116 +57,97 @@ const Login = () => {
     }
   };
 
-  // Sample data login for testing
+  // Sample data login for testing - now more reliable and direct
   const handleSampleLogin = async () => {
     setIsSampleLoading(true);
     
     try {
-      // Sample data that would come from Riot API - simplified to ensure it works reliably
+      // Sample data that would come from Riot API
       const sampleData = {
         summoner: {
-          id: "sUmM0n3r1D12345",
-          puuid: "pUU1D_1234567890abcdefghijklmnopqrstuvwxyz",
-          name: "SummonerName",
+          id: "sampleSummonerId123",
+          puuid: "samplePuuid123456789",
+          name: "TestSummoner",
           profileIconId: 4567,
           summonerLevel: 287,
-          riotId: "SummonerName#EUW"
+          riotId: "TestSummoner#TEST"
         },
         account: {
-          gameName: "SummonerName",
-          tagLine: "EUW"
+          gameName: "TestSummoner",
+          tagLine: "TEST"
         },
         region: "europe",
         profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
       };
       
-      // Use a consistent test account to avoid rate limits
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: "test@example.com",
-        password: "Test123456!",
+      // Email and password for test account - consistent for easy testing
+      const testEmail = "test@example.com";
+      const testPassword = "Test123456!";
+
+      // First, try to sign in with the test account
+      let { data: userData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
       });
       
+      // If login fails, create the test account
       if (signInError) {
-        // If user doesn't exist yet, create it
-        if (signInError.message.includes("Invalid login credentials")) {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: "test@example.com",
-            password: "Test123456!",
-            options: {
-              data: {
-                is_test_user: true
-              }
-            }
-          });
-          
-          if (signUpError) {
-            console.error("Error creating test user:", signUpError);
-            throw new Error("Failed to create test account");
-          }
-          
-          // If user was created successfully
-          if (signUpData.user) {
-            // Update profile with sample data
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({
-                riot_id: sampleData.summoner.riotId,
-                riot_data: sampleData,
-                username: "TestUser",
-                balance: 10000
-              })
-              .eq('id', signUpData.user.id);
-            
-            if (updateError) {
-              console.error("Error updating profile:", updateError);
-              throw new Error("Failed to set up test account profile");
-            }
-            
-            // Now sign in with the newly created account
-            const { error: secondSignInError } = await supabase.auth.signInWithPassword({
-              email: "test@example.com",
-              password: "Test123456!",
-            });
-            
-            if (secondSignInError) {
-              throw new Error("Created test account but couldn't sign in");
-            }
-            
-            toast({
-              title: "Sample Login Successful",
-              description: "You're logged in with sample data",
-            });
-            
-            navigate('/', { replace: true });
-          }
-        } else {
-          console.error("Unexpected sign-in error:", signInError);
-          throw new Error(signInError.message || "Login failed");
-        }
-      } else if (signInData.user) {
-        // User already exists, just update the profile with sample data
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            riot_id: sampleData.summoner.riotId,
-            riot_data: sampleData,
-            username: "TestUser",
-            balance: 10000
-          })
-          .eq('id', signInData.user.id);
+        console.log("Couldn't sign in, creating test account...");
         
-        if (updateError) {
-          console.error("Error updating existing profile:", updateError);
-          throw new Error("Failed to update test account profile");
-        }
-        
-        toast({
-          title: "Sample Login Successful",
-          description: "You're logged in with sample data",
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: testEmail,
+          password: testPassword,
+          options: {
+            data: {
+              is_test_user: true
+            }
+          }
         });
         
-        navigate('/', { replace: true });
+        if (signUpError) {
+          throw new Error(`Failed to create test account: ${signUpError.message}`);
+        }
+        
+        userData = signUpData;
+        
+        // Wait a moment for the database to update
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
+      
+      if (!userData.user) {
+        throw new Error("Failed to get user data");
+      }
+      
+      // Update the profile with sample data
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          riot_id: sampleData.summoner.riotId,
+          riot_data: sampleData,
+          username: "TestUser",
+          balance: 10000,
+          bets_won: 15,
+          bets_lost: 5,
+          avatar_url: sampleData.profilePictureUrl
+        })
+        .eq('id', userData.user.id);
+      
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+        // If updating fails, we can still proceed since the user is logged in
+        console.log("Continuing despite profile update error");
+      }
+      
+      // Manually refresh the auth context to make sure app recognizes the user is logged in
+      await refreshAuth();
+      
+      toast({
+        title: "Sample Login Successful",
+        description: "You're logged in with sample data!",
+      });
+      
+      // Navigate to home page
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Sample login error:', error);
       toast({
