@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Wallet, Trophy, BarChart2, Award, UserRound, User, LogOut, Edit, RefreshCw } from 'lucide-react';
 import { signOut } from '@/services/supabaseService';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { linkRiotAccount, refreshRiotAccountData } from '@/services/riotService';
 
 const Profile = () => {
   const { user } = useSupabase();
@@ -120,14 +122,11 @@ const Profile = () => {
     
     setIsConnectingRiot(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          riot_id: riotId,
-        })
-        .eq('id', user.id);
+      const result = await linkRiotAccount(riotId);
       
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to link Riot account');
+      }
       
       toast({
         title: "Riot Account Connected",
@@ -139,11 +138,32 @@ const Profile = () => {
       console.error('Error linking Riot account:', error);
       toast({
         title: "Connection Failed",
-        description: "Failed to link Riot Games account. Please try again.",
+        description: error.message || "Failed to link Riot Games account. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsConnectingRiot(false);
+    }
+  };
+  
+  const handleRefreshRiotData = async () => {
+    try {
+      setIsLoading(true);
+      await refreshRiotAccountData();
+      toast({
+        title: "Riot Data Refreshed",
+        description: "Your Riot Games account data has been updated.",
+      });
+      refetch();
+    } catch (error) {
+      console.error('Error refreshing Riot data:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh Riot Games account data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -189,7 +209,14 @@ const Profile = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center text-center">
                 <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage src={profile?.avatar_url || ""} />
+                  {profile?.riot_data?.summoner?.profileIconId ? (
+                    <AvatarImage 
+                      src={`https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${profile.riot_data.summoner.profileIconId}.png`} 
+                      alt="Profile" 
+                    />
+                  ) : (
+                    <AvatarImage src={profile?.avatar_url || ""} />
+                  )}
                   <AvatarFallback className="bg-primary/10 text-primary text-lg">
                     {username ? username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
@@ -231,6 +258,12 @@ const Profile = () => {
                     {profile?.riot_id ? (
                       <div className="mt-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
                         Riot ID: {profile.riot_id}
+                      </div>
+                    ) : null}
+                    
+                    {profile?.riot_data?.summoner ? (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Summoner Level: {profile.riot_data.summoner.summonerLevel}
                       </div>
                     ) : null}
                     
@@ -481,6 +514,11 @@ const Profile = () => {
                               </div>
                               <AlertDescription>
                                 Your Riot Games account is connected: <strong>{profile.riot_id}</strong>
+                                {profile.riot_data?.summoner && (
+                                  <div className="mt-1 text-sm">
+                                    Summoner Level: {profile.riot_data.summoner.summonerLevel}
+                                  </div>
+                                )}
                               </AlertDescription>
                             </div>
                           </Alert>
@@ -490,10 +528,17 @@ const Profile = () => {
                               variant="outline" 
                               size="sm" 
                               className="flex items-center gap-2"
-                              onClick={() => refetch()}
+                              onClick={handleRefreshRiotData}
+                              disabled={isLoading}
                             >
-                              <RefreshCw className="h-4 w-4" />
-                              Refresh Riot Account Data
+                              {isLoading ? (
+                                <>Loading...</>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4" />
+                                  Refresh Riot Account Data
+                                </>
+                              )}
                             </Button>
                           </div>
                         </div>

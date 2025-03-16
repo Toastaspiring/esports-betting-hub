@@ -60,19 +60,85 @@ serve(async (req) => {
       )
     }
 
-    // In a real application, you would make a call to the Riot Games API here
-    // using the RIOT_API_KEY from environment variables
-    
-    // For demonstration purposes, we'll just simulate a response
-    // In a real implementation, you would call the Riot Games API endpoints
-    
-    // Example response data from a simulated API call
-    const riotData = {
-      id: riot_id,
-      summonerLevel: 150,
-      profileIconId: 4123,
-      // More data would be available from the actual Riot API
+    // Get the RIOT API key from environment variables
+    const RIOT_API_KEY = Deno.env.get('RIOT_API_KEY')
+    if (!RIOT_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'Riot API key not configured' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 500 
+        }
+      )
     }
+
+    // Parse Riot ID format (username#tagLine)
+    const [gameName, tagLine] = riot_id.split('#');
+    
+    if (!gameName || !tagLine) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid Riot ID format. Expected format: username#tag' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 400 
+        }
+      )
+    }
+
+    // Call Riot Games API to get account information
+    // Documentation: https://developer.riotgames.com/apis#account-v1
+    const response = await fetch(`https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`, {
+      headers: {
+        "X-Riot-Token": RIOT_API_KEY
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Riot API error:', response.status, errorText);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to fetch Riot account', 
+          status: response.status,
+          details: errorText
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: response.status === 404 ? 404 : 500 
+        }
+      )
+    }
+
+    const riotAccountData = await response.json();
+    
+    // Get additional summoner data if it's a League of Legends account
+    let summonerData = null;
+    try {
+      // Find the puuid from account data
+      const puuid = riotAccountData.puuid;
+      
+      // Try to get summoner data from NA region (can be adjusted in a future version)
+      const summonerResponse = await fetch(`https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`, {
+        headers: {
+          "X-Riot-Token": RIOT_API_KEY
+        }
+      });
+      
+      if (summonerResponse.ok) {
+        summonerData = await summonerResponse.json();
+      }
+    } catch (error) {
+      console.log('Error fetching summoner data (non-critical):', error);
+      // We'll continue even if summoner data fails as it's not critical
+    }
+    
+    // Combine the data
+    const riotData = {
+      ...riotAccountData,
+      summoner: summonerData,
+      connectedAt: new Date().toISOString()
+    };
 
     // Update the user's profile with Riot data
     const { error: updateError } = await supabaseClient
@@ -109,7 +175,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing request:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal Server Error' }),
+      JSON.stringify({ error: 'Internal Server Error', details: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
         status: 500 

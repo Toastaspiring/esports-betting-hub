@@ -164,6 +164,8 @@ export type Database = {
           bets_won: number | null
           created_at: string
           id: string
+          riot_data: Json | null
+          riot_id: string | null
           username: string | null
         }
         Insert: {
@@ -173,6 +175,8 @@ export type Database = {
           bets_won?: number | null
           created_at?: string
           id: string
+          riot_data?: Json | null
+          riot_id?: string | null
           username?: string | null
         }
         Update: {
@@ -182,6 +186,8 @@ export type Database = {
           bets_won?: number | null
           created_at?: string
           id?: string
+          riot_data?: Json | null
+          riot_id?: string | null
           username?: string | null
         }
         Relationships: []
