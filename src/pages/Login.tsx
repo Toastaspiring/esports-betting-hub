@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { signIn, signUp } from '@/services/supabaseService';
@@ -9,27 +9,79 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Define validation schemas using Zod
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+});
+
+const registerSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string()
+    .min(6, { message: "Password must be at least 6 characters" })
+    .max(100, { message: "Password cannot exceed 100 characters" }),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [formSuccess, setFormSuccess] = useState('');
+  const [activeTab, setActiveTab] = useState('login');
   const { user } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Define form methods for login
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+  
+  // Define form methods for registration
+  const registerForm = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
   
   // Redirect if already logged in
   if (user) {
     return <Navigate to="/" replace />;
   }
   
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle login submission
+  const handleSignIn = async (values: LoginFormValues) => {
     setIsLoading(true);
+    setFormSuccess('');
     
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(values.email, values.password);
       
       if (error) {
         toast({
@@ -56,12 +108,13 @@ const Login = () => {
     }
   };
   
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle registration submission
+  const handleSignUp = async (values: RegisterFormValues) => {
     setIsLoading(true);
+    setFormSuccess('');
     
     try {
-      const { error } = await signUp(email, password);
+      const { error } = await signUp(values.email, values.password);
       
       if (error) {
         toast({
@@ -70,10 +123,15 @@ const Login = () => {
           variant: "destructive",
         });
       } else {
+        setFormSuccess('Registration successful! You can now log in.');
         toast({
           title: "Registration successful",
           description: "Welcome to LoL Bet! You can now log in.",
         });
+        // Reset the form
+        registerForm.reset();
+        // Switch to login tab after successful registration
+        setActiveTab('login');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -88,7 +146,7 @@ const Login = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-5">
@@ -103,115 +161,179 @@ const Login = () => {
           <p className="text-muted-foreground">Sign in to place bets and track your winnings</p>
         </div>
         
-        <Tabs defaultValue="login" className="w-full">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={setActiveTab} 
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
           
           <TabsContent value="login">
-            <Card>
+            <Card className="border-0 shadow-lg">
               <CardHeader>
                 <CardTitle>Login</CardTitle>
                 <CardDescription>
                   Enter your email and password to access your account
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleSignIn}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(handleSignIn)}>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              placeholder="your@email.com"
+                              autoComplete="email"
+                              disabled={isLoading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
-                      <a href="#" className="text-xs text-primary underline-offset-4 hover:underline">
-                        Forgot password?
-                      </a>
-                    </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Password</FormLabel>
+                            <a href="#" className="text-xs text-primary underline-offset-4 hover:underline">
+                              Forgot password?
+                            </a>
+                          </div>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="password"
+                              placeholder="••••••••"
+                              autoComplete="current-password"
+                              disabled={isLoading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Logging in...
-                      </>
-                    ) : (
-                      'Login'
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        'Login'
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Form>
             </Card>
           </TabsContent>
           
           <TabsContent value="register">
-            <Card>
+            <Card className="border-0 shadow-lg">
               <CardHeader>
                 <CardTitle>Create an account</CardTitle>
                 <CardDescription>
                   Register to start betting on your favorite teams
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleSignUp}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
-                    <Input
-                      id="register-email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
+              {formSuccess && (
+                <div className="px-6">
+                  <Alert className="bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800 mb-4">
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription>{formSuccess}</AlertDescription>
+                  </Alert>
+                </div>
+              )}
+              <Form {...registerForm}>
+                <form onSubmit={registerForm.handleSubmit(handleSignUp)}>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              placeholder="your@email.com"
+                              autoComplete="email"
+                              disabled={isLoading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <Input
-                      id="register-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="password"
+                              placeholder="••••••••"
+                              autoComplete="new-password"
+                              disabled={isLoading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Password must be at least 6 characters long
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      'Create account'
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="password"
+                              placeholder="••••••••"
+                              autoComplete="new-password"
+                              disabled={isLoading}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        'Create account'
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Form>
             </Card>
           </TabsContent>
         </Tabs>
