@@ -63,7 +63,7 @@ const Login = () => {
     setIsSampleLoading(true);
     
     try {
-      // Sample data that would come from Riot API
+      // Sample data that would come from Riot API - simplified to ensure it works reliably
       const sampleData: RiotApiResponse = {
         summoner: {
           id: "sUmM0n3r1D12345",
@@ -93,11 +93,13 @@ const Login = () => {
       }
       
       if (signInData.user) {
+        // Convert RiotApiResponse to JSON string and then parse to avoid type issues
+        const riotDataJson = JSON.stringify(sampleData);
+        
         // Update user profile with the sample Riot data
         const { error: updateError } = await supabase.from('profiles').update({
           riot_id: sampleData.summoner.riotId,
-          // Convert RiotApiResponse to Json using JSON.stringify then parse
-          riot_data: JSON.parse(JSON.stringify(sampleData)) as Json
+          riot_data: JSON.parse(riotDataJson) 
         }).eq('id', signInData.user.id);
         
         if (updateError) {
