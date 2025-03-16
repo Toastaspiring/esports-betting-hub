@@ -1,9 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useSupabase } from '@/hooks/useSupabase';
+import { useNavigate } from 'react-router-dom';
 
 const HeroSection = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const { user } = useSupabase();
+  const navigate = useNavigate();
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -12,6 +16,18 @@ const HeroSection = () => {
     
     return () => clearTimeout(timer);
   }, []);
+  
+  const handleStartBetting = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    
+    if (user) {
+      // User is logged in, navigate to matches page
+      navigate('/matches');
+    } else {
+      // User is not logged in, navigate to login page
+      navigate('/login');
+    }
+  };
   
   return (
     <section className="relative pt-24 pb-16 overflow-hidden">
@@ -67,6 +83,7 @@ const HeroSection = () => {
           >
             <a 
               href="/matches" 
+              onClick={handleStartBetting}
               className="inline-flex items-center px-6 py-3 font-medium text-sm bg-primary hover:bg-primary/90 text-white rounded-full transition-colors"
             >
               Start Betting
