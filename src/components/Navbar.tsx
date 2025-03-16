@@ -128,32 +128,32 @@ const Navbar = () => {
 
       {/* Mobile Navigation Menu */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-lg animate-slide-in-bottom">
+        <div className="md:hidden absolute top-full left-0 w-full bg-background border-b border-slate-200/20 shadow-lg animate-slide-in-bottom">
           <div className="container px-4 py-4 flex flex-col space-y-3">
             <Link 
               to="/" 
-              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-slate-100 transition-colors"
+              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors"
               onClick={() => setIsOpen(false)}
             >
               Home
             </Link>
             <Link 
               to="/matches" 
-              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-slate-100 transition-colors"
+              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors"
               onClick={() => setIsOpen(false)}
             >
               Matches
             </Link>
             <Link 
               to="/leaderboard" 
-              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-slate-100 transition-colors"
+              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors"
               onClick={() => setIsOpen(false)}
             >
               Leaderboard
             </Link>
             <Link 
               to="/how-it-works" 
-              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-slate-100 transition-colors"
+              className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors"
               onClick={() => setIsOpen(false)}
             >
               How It Works
@@ -163,19 +163,19 @@ const Navbar = () => {
               <>
                 <Link 
                   to="/my-bets" 
-                  className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-slate-100 transition-colors"
+                  className="flex items-center py-2 px-3 rounded-md text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   My Bets
                 </Link>
                 
-                <div className="border-t border-slate-200 pt-3 mt-2">
+                <div className="border-t border-slate-200/20 pt-3 mt-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <img 
                         src={MOCK_USER.avatar} 
                         alt={user.email || "User"}
-                        className="w-8 h-8 rounded-full border border-slate-200 mr-3" 
+                        className="w-8 h-8 rounded-full border border-slate-200/20 mr-3" 
                       />
                       <div>
                         <p className="text-sm font-medium">{user.email}</p>
@@ -197,7 +197,7 @@ const Navbar = () => {
                           handleLogout();
                           setIsOpen(false);
                         }}
-                        className="p-2 rounded-md text-slate-500 hover:bg-slate-100 transition-colors"
+                        className="p-2 rounded-md text-slate-500 hover:bg-slate-700/50 transition-colors"
                         aria-label="Logout"
                       >
                         <LogOut className="w-5 h-5" />
@@ -207,10 +207,10 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <div className="border-t border-slate-200 pt-3 mt-2 flex flex-col space-y-2">
+              <div className="border-t border-slate-200/20 pt-3 mt-2 flex flex-col space-y-2">
                 <Link 
                   to="/login" 
-                  className="py-2 px-3 rounded-md text-sm font-medium text-center bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                  className="py-2 px-3 rounded-md text-sm font-medium text-center bg-secondary border border-slate-600 hover:bg-secondary/80 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Login
