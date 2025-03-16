@@ -5,16 +5,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const MyBets = () => {
-  const { session, supabaseClient } = useSupabase();
+  const { session } = useSupabase();
   
   const { data: bets, isLoading } = useQuery({
     queryKey: ["my-bets", session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
       
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from("bets")
         .select(`
           *,
