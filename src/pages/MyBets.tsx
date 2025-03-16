@@ -7,14 +7,14 @@ import { useSupabase } from "@/hooks/useSupabase";
 import { useQuery } from "@tanstack/react-query";
 
 const MyBets = () => {
-  const { supabase, session } = useSupabase();
+  const { session, supabaseClient } = useSupabase();
   
   const { data: bets, isLoading } = useQuery({
     queryKey: ["my-bets", session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("bets")
         .select(`
           *,

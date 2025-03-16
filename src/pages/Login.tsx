@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { signIn, signUp } from '@/services/supabaseService';
@@ -8,8 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -23,7 +21,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Define validation schemas using Zod
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
@@ -51,7 +48,6 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Define form methods for login
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -60,7 +56,6 @@ const Login = () => {
     },
   });
   
-  // Define form methods for registration
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -70,12 +65,10 @@ const Login = () => {
     },
   });
   
-  // Redirect if already logged in
   if (user) {
     return <Navigate to="/" replace />;
   }
   
-  // Handle login submission
   const handleSignIn = async (values: LoginFormValues) => {
     setIsLoading(true);
     setFormSuccess('');
@@ -108,7 +101,6 @@ const Login = () => {
     }
   };
   
-  // Handle registration submission
   const handleSignUp = async (values: RegisterFormValues) => {
     setIsLoading(true);
     setFormSuccess('');
@@ -128,9 +120,7 @@ const Login = () => {
           title: "Registration successful",
           description: "Welcome to LoL Bet! You can now log in.",
         });
-        // Reset the form
         registerForm.reset();
-        // Switch to login tab after successful registration
         setActiveTab('login');
       }
     } catch (error) {
@@ -146,7 +136,7 @@ const Login = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-5">
@@ -253,7 +243,7 @@ const Login = () => {
               </CardHeader>
               {formSuccess && (
                 <div className="px-6">
-                  <Alert className="bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800 mb-4">
+                  <Alert className="bg-green-900/20 text-green-300 border-green-800 mb-4">
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>{formSuccess}</AlertDescription>
                   </Alert>

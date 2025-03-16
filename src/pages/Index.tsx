@@ -55,7 +55,7 @@ const Index = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* LCK Summer Split */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group">
+              <div className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow group">
                 <div className="relative h-48">
                   <img
                     src="https://cdn1.dotesports.com/wp-content/uploads/2020/11/22130940/lck.jpg"
@@ -64,7 +64,7 @@ const Index = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
                     <div className="absolute bottom-0 left-0 p-5">
-                      <span className="inline-block px-2 py-1 bg-white text-xs font-medium rounded-md mb-2">
+                      <span className="inline-block px-2 py-1 bg-primary/20 text-xs font-medium rounded-md mb-2">
                         June 15 - Aug 20
                       </span>
                       <h3 className="text-xl font-semibold text-white">LCK Summer Split</h3>
@@ -86,7 +86,7 @@ const Index = () => {
               </div>
               
               {/* LEC Summer Split */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group">
+              <div className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow group">
                 <div className="relative h-48">
                   <img
                     src="https://cdn1.dotesports.com/wp-content/uploads/2020/08/01142835/lec-summer-playoffs.png"
@@ -95,7 +95,7 @@ const Index = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
                     <div className="absolute bottom-0 left-0 p-5">
-                      <span className="inline-block px-2 py-1 bg-white text-xs font-medium rounded-md mb-2">
+                      <span className="inline-block px-2 py-1 bg-primary/20 text-xs font-medium rounded-md mb-2">
                         June 17 - Aug 22
                       </span>
                       <h3 className="text-xl font-semibold text-white">LEC Summer Split</h3>
@@ -117,7 +117,7 @@ const Index = () => {
               </div>
               
               {/* MSI 2023 */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group">
+              <div className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow group">
                 <div className="relative h-48">
                   <img
                     src="https://cdn1.dotesports.com/wp-content/uploads/2023/04/03155301/MSI-2023-format.png"
@@ -126,7 +126,7 @@ const Index = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
                     <div className="absolute bottom-0 left-0 p-5">
-                      <span className="inline-block px-2 py-1 bg-white text-xs font-medium rounded-md mb-2">
+                      <span className="inline-block px-2 py-1 bg-primary/20 text-xs font-medium rounded-md mb-2">
                         August 30 - Sept 10
                       </span>
                       <h3 className="text-xl font-semibold text-white">Mid-Season Invitational</h3>
@@ -153,7 +153,7 @@ const Index = () => {
         <UserStats />
         
         {/* How it Works Section */}
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-secondary">
           <div className="container px-4 mx-auto">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-2xl sm:text-3xl font-display font-bold tracking-tight mb-4">
@@ -165,7 +165,7 @@ const Index = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="flex flex-col items-center text-center p-6">
+              <div className="flex flex-col items-center text-center p-6 bg-card/50 rounded-lg">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
                   <Wallet className="w-7 h-7 text-primary" />
                 </div>
@@ -175,7 +175,7 @@ const Index = () => {
                 </p>
               </div>
               
-              <div className="flex flex-col items-center text-center p-6">
+              <div className="flex flex-col items-center text-center p-6 bg-card/50 rounded-lg">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
                   <Calendar className="w-7 h-7 text-primary" />
                 </div>
@@ -185,7 +185,7 @@ const Index = () => {
                 </p>
               </div>
               
-              <div className="flex flex-col items-center text-center p-6">
+              <div className="flex flex-col items-center text-center p-6 bg-card/50 rounded-lg">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
                   <Trophy className="w-7 h-7 text-primary" />
                 </div>
@@ -210,7 +210,7 @@ const Index = () => {
       </main>
       
       {/* Footer */}
-      <footer className="bg-slate-50 border-t border-slate-200/80 py-12">
+      <footer className="bg-card/20 border-t border-border py-12">
         <div className="container px-4 mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -306,7 +306,7 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="border-t border-slate-200 mt-12 pt-6 flex flex-col md:flex-row justify-between items-center">
+          <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} LoL Bet. All rights reserved.
             </p>
