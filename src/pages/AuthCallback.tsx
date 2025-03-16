@@ -35,7 +35,7 @@ const AuthCallback = () => {
         
         // Call the Supabase edge function to handle the callback
         const { data, error } = await supabase.functions.invoke('riot-auth', {
-          query: { 
+          body: { 
             action: 'callback',
             code,
             state,

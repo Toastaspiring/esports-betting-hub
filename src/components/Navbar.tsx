@@ -7,12 +7,40 @@ import { useSupabase } from '@/hooks/useSupabase';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, session } = useSupabase();
+  const { user } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Fetch profile data for the currently logged-in user
+  const { data: profile } = useQuery({
+    queryKey: ['navbarProfile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+  
+  // Extract data for display
+  const riotData = profile?.riot_data || {};
+  const hasRiotData = riotData && riotData.summoner && riotData.summoner.profileIconId;
+  const profileIconUrl = hasRiotData
+    ? `https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${riotData.summoner.profileIconId}.png`
+    : riotData.profilePictureUrl || MOCK_USER.avatar;
+  
+  const displayName = profile?.username || (riotData.account ? `${riotData.account.gameName}#${riotData.account.tagLine}` : user?.email);
   
   const handleLogout = async () => {
     try {
@@ -74,15 +102,15 @@ const Navbar = () => {
                 </Link>
                 <div className="flex items-center px-3 py-1.5 rounded-full bg-secondary">
                   <Wallet className="w-4 h-4 text-primary mr-2" />
-                  <span className="text-sm font-medium">{MOCK_USER.balance.toLocaleString()} LP</span>
+                  <span className="text-sm font-medium">{profile?.balance?.toLocaleString() || "0"} LP</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <Link to="/profile" className="flex items-center space-x-2 p-1.5 -mr-1.5 rounded-full hover:bg-slate-100 transition-colors">
                     <div className="relative">
                       <img 
-                        src={MOCK_USER.avatar} 
-                        alt={user.email || "User"}
+                        src={profileIconUrl}
+                        alt={displayName || "User"}
                         className="w-8 h-8 rounded-full border border-slate-200 object-cover" 
                       />
                       <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></span>
@@ -104,11 +132,6 @@ const Navbar = () => {
                 <Link to="/login">
                   <Button variant="outline" size="sm">
                     Login
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button size="sm">
-                    Register
                   </Button>
                 </Link>
               </div>
@@ -173,13 +196,13 @@ const Navbar = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <img 
-                        src={MOCK_USER.avatar} 
-                        alt={user.email || "User"}
+                        src={profileIconUrl}
+                        alt={displayName || "User"}
                         className="w-8 h-8 rounded-full border border-slate-200/20 mr-3" 
                       />
                       <div>
-                        <p className="text-sm font-medium">{user.email}</p>
-                        <p className="text-xs text-muted-foreground">{MOCK_USER.balance.toLocaleString()} LP</p>
+                        <p className="text-sm font-medium">{displayName}</p>
+                        <p className="text-xs text-muted-foreground">{profile?.balance?.toLocaleString() || "0"} LP</p>
                       </div>
                     </div>
                     
@@ -210,17 +233,10 @@ const Navbar = () => {
               <div className="border-t border-slate-200/20 pt-3 mt-2 flex flex-col space-y-2">
                 <Link 
                   to="/login" 
-                  className="py-2 px-3 rounded-md text-sm font-medium text-center bg-secondary border border-slate-600 hover:bg-secondary/80 transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/login" 
                   className="py-2 px-3 rounded-md text-sm font-medium text-center bg-primary text-white hover:bg-primary/90 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
-                  Register
+                  Login with Riot
                 </Link>
               </div>
             )}

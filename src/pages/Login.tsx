@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -29,7 +29,7 @@ const Login = () => {
       
       // Call the Supabase edge function to get the Riot OAuth URL
       const { data, error } = await supabase.functions.invoke('riot-auth', {
-        query: { 
+        body: { 
           action: 'login',
           redirectUrl 
         }

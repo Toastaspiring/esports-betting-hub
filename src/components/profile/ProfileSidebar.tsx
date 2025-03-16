@@ -64,6 +64,31 @@ export const ProfileSidebar = ({
     ? profile.bets_won / (profile.bets_won + profile.bets_lost)
     : 0;
 
+  // Determine the profile picture URL
+  let profileIconUrl = "";
+  let displayName = username || "Anonymous User";
+  let riotIdDisplay = profile?.riot_id || "";
+  let summonerLevel = 0;
+
+  if (hasSummoner && riotData.summoner && riotData.summoner.profileIconId) {
+    profileIconUrl = `https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${riotData.summoner.profileIconId}.png`;
+    summonerLevel = riotData.summoner.summonerLevel || 0;
+  } else if (riotData && riotData.profilePictureUrl) {
+    profileIconUrl = riotData.profilePictureUrl;
+  } 
+
+  if (riotData && riotData.account) {
+    riotIdDisplay = `${riotData.account.gameName}#${riotData.account.tagLine}`;
+  } else if (riotData && riotData.summoner && riotData.summoner.riotId) {
+    riotIdDisplay = riotData.summoner.riotId;
+  }
+  
+  if (!displayName && riotData && riotData.account) {
+    displayName = riotData.account.gameName;
+  } else if (!displayName && riotData && riotData.summoner) {
+    displayName = riotData.summoner.name;
+  }
+
   return (
     <Card className="sticky top-24">
       <CardHeader className="pb-4">
@@ -79,16 +104,16 @@ export const ProfileSidebar = ({
       </CardHeader>
       <CardContent className="flex flex-col items-center text-center">
         <Avatar className="h-20 w-20 mb-4">
-          {hasSummoner && riotData.summoner.profileIconId ? (
+          {profileIconUrl ? (
             <AvatarImage 
-              src={`https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${riotData.summoner.profileIconId}.png`} 
+              src={profileIconUrl}
               alt="Profile" 
             />
           ) : (
             <AvatarImage src={profile?.avatar_url || ""} />
           )}
           <AvatarFallback className="bg-primary/10 text-primary text-lg">
-            {username ? username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+            {displayName ? displayName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
           </AvatarFallback>
         </Avatar>
         
@@ -122,18 +147,18 @@ export const ProfileSidebar = ({
           </div>
         ) : (
           <>
-            <h2 className="text-xl font-semibold">{profile?.username || "Anonymous User"}</h2>
+            <h2 className="text-xl font-semibold">{displayName}</h2>
             <p className="text-muted-foreground text-sm mt-1">{user?.email}</p>
             
-            {profile?.riot_id ? (
+            {riotIdDisplay ? (
               <div className="mt-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
-                Riot ID: {profile.riot_id}
+                Riot ID: {riotIdDisplay}
               </div>
             ) : null}
             
-            {hasSummoner ? (
+            {hasSummoner && summonerLevel ? (
               <div className="mt-2 text-xs text-muted-foreground">
-                Summoner Level: {riotData.summoner.summonerLevel}
+                Summoner Level: {summonerLevel}
               </div>
             ) : null}
             

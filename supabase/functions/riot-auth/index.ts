@@ -18,8 +18,9 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    // Parse the request body
+    const requestData = await req.json();
+    const action = requestData.action;
     
     // Create a Supabase client
     const supabaseClient = createClient(
@@ -35,9 +36,9 @@ serve(async (req) => {
     // Handle login initialization
     if (action === 'login') {
       // The redirect URL that Riot will return to after authentication
-      const redirectUrl = url.searchParams.get('redirectUrl') || '';
+      const redirectUrl = requestData.redirectUrl || '';
       
-      // Store the redirect URL in the session storage
+      // Generate a state parameter for security
       const state = crypto.randomUUID();
       
       // Generate the Riot OAuth URL
@@ -56,8 +57,8 @@ serve(async (req) => {
     
     // Handle OAuth callback
     if (action === 'callback') {
-      const code = url.searchParams.get('code');
-      const state = url.searchParams.get('state');
+      const code = requestData.code;
+      const state = requestData.state;
       
       if (!code) {
         throw new Error('No code provided in callback');
@@ -74,7 +75,7 @@ serve(async (req) => {
         body: new URLSearchParams({
           'grant_type': 'authorization_code',
           'code': code,
-          'redirect_uri': url.searchParams.get('redirect_uri') || '',
+          'redirect_uri': requestData.redirect_uri || '',
         })
       });
       
