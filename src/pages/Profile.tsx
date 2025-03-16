@@ -1,665 +1,445 @@
+
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/hooks/useSupabase";
 import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { BarChart3, Calendar, CreditCard, History, Settings, User, Award, BadgeCheck, TrendingUp, AlertCircle } from 'lucide-react';
-import { MOCK_USER, MOCK_MATCHES } from '@/lib/constants';
-
-// Mock user bet history
-const MOCK_BET_HISTORY = [
-  {
-    id: 1,
-    match: {
-      id: MOCK_MATCHES[0]?.id,
-      teamA: MOCK_MATCHES[0]?.teamA,
-      teamB: MOCK_MATCHES[0]?.teamB,
-      league: MOCK_MATCHES[0]?.league,
-      date: new Date(2023, 8, 5, 15, 30)
-    },
-    betOn: MOCK_MATCHES[0]?.teamA?.name,
-    amount: 1500,
-    odds: 2.1,
-    result: "win",
-    profit: 1650,
-    settled: true
-  },
-  {
-    id: 2,
-    match: {
-      id: MOCK_MATCHES[1]?.id,
-      teamA: MOCK_MATCHES[1]?.teamA,
-      teamB: MOCK_MATCHES[1]?.teamB,
-      league: MOCK_MATCHES[1]?.league,
-      date: new Date(2023, 8, 2, 18, 0)
-    },
-    betOn: MOCK_MATCHES[1]?.teamB?.name,
-    amount: 800,
-    odds: 1.75,
-    result: "loss",
-    profit: -800,
-    settled: true
-  },
-  {
-    id: 3,
-    match: {
-      id: MOCK_MATCHES[2]?.id,
-      teamA: MOCK_MATCHES[2]?.teamA,
-      teamB: MOCK_MATCHES[2]?.teamB,
-      league: MOCK_MATCHES[2]?.league,
-      date: new Date(2023, 8, 10, 20, 0)
-    },
-    betOn: MOCK_MATCHES[2]?.teamA?.name,
-    amount: 2000,
-    odds: 1.5,
-    result: "pending",
-    profit: 0,
-    settled: false
-  },
-  {
-    id: 4,
-    match: {
-      id: MOCK_MATCHES[3]?.id,
-      teamA: MOCK_MATCHES[3]?.teamA,
-      teamB: MOCK_MATCHES[3]?.teamB,
-      league: MOCK_MATCHES[3]?.league,
-      date: new Date(2023, 7, 28, 16, 0)
-    },
-    betOn: MOCK_MATCHES[3]?.teamB?.name,
-    amount: 1200,
-    odds: 1.9,
-    result: "win",
-    profit: 1080,
-    settled: true
-  },
-  {
-    id: 5,
-    match: {
-      id: MOCK_MATCHES[0]?.id,
-      teamA: MOCK_MATCHES[0]?.teamA,
-      teamB: MOCK_MATCHES[0]?.teamB,
-      league: MOCK_MATCHES[0]?.league,
-      date: new Date(2023, 7, 25, 14, 30)
-    },
-    betOn: MOCK_MATCHES[0]?.teamA?.name,
-    amount: 1000,
-    odds: 2.5,
-    result: "loss",
-    profit: -1000,
-    settled: true
-  }
-];
-
-// Mock achievements
-const MOCK_ACHIEVEMENTS = [
-  {
-    id: 1,
-    name: "First Blood",
-    description: "Place your first bet",
-    icon: <Award className="h-6 w-6 text-blue-400" />,
-    progress: 100,
-    completed: true,
-    date: new Date(2023, 6, 15)
-  },
-  {
-    id: 2,
-    name: "Hot Streak",
-    description: "Win 5 bets in a row",
-    icon: <TrendingUp className="h-6 w-6 text-green-400" />,
-    progress: 60,
-    completed: false,
-    current: 3,
-    required: 5
-  },
-  {
-    id: 3,
-    name: "High Roller",
-    description: "Place a bet of 5,000 LP or more",
-    icon: <CreditCard className="h-6 w-6 text-purple-400" />,
-    progress: 40,
-    completed: false,
-    current: 2000,
-    required: 5000
-  },
-  {
-    id: 4,
-    name: "Analyst",
-    description: "Win 10 bets total",
-    icon: <BarChart3 className="h-6 w-6 text-amber-400" />,
-    progress: 100,
-    completed: true,
-    date: new Date(2023, 7, 10)
-  },
-  {
-    id: 5,
-    name: "Underdog Lover",
-    description: "Win a bet with odds of 3.0 or higher",
-    icon: <BadgeCheck className="h-6 w-6 text-red-400" />,
-    progress: 0,
-    completed: false,
-    current: 0,
-    required: 1
-  }
-];
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Wallet, Trophy, BarChart2, Award, UserRound, User, LogOut, Edit } from 'lucide-react';
+import { signOut } from '@/services/supabaseService';
 
 const Profile = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useSupabase();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [editMode, setEditMode] = useState(false);
+  const [username, setUsername] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Fetch user profile data
+  const { data: profile, isLoading: profileLoading, refetch } = useQuery({
+    queryKey: ['profileDetails', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+  
+  // Fetch user bets data
+  const { data: bets } = useQuery({
+    queryKey: ['userBets', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('bets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
   
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
   
-  // Calculate betting stats
-  const totalBets = MOCK_USER.betsWon + MOCK_USER.betsLost;
-  const winPercentage = (MOCK_USER.betsWon / totalBets) * 100;
-  const totalWagered = MOCK_BET_HISTORY.reduce((total, bet) => total + bet.amount, 0);
-  const totalProfit = MOCK_BET_HISTORY
-    .filter(bet => bet.settled)
-    .reduce((total, bet) => total + bet.profit, 0);
+  useEffect(() => {
+    if (profile) {
+      setUsername(profile.username || "");
+    }
+  }, [profile]);
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Sign Out Failed",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      refetch();
+      setEditMode(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Calculate stats
+  const winRate = profile?.bets_won && (profile.bets_won + profile.bets_lost) > 0
+    ? profile.bets_won / (profile.bets_won + profile.bets_lost)
+    : 0;
+  
+  const wonBets = bets?.filter(bet => bet.status === 'won') || [];
+  const pendingBets = bets?.filter(bet => bet.status === 'pending') || [];
+  const lostBets = bets?.filter(bet => bet.status === 'lost') || [];
+  
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container pt-24 pb-16">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
       <main className="container pt-24 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Profile Card */}
-            <Card className="glass-card overflow-hidden">
-              <div className="bg-gradient-to-r from-primary/20 to-primary/10 h-24"></div>
-              <div className="px-6 pb-6">
-                <div className="flex justify-center -mt-12 mb-4">
-                  <Avatar className="h-24 w-24 border-4 border-background">
-                    <AvatarImage src={MOCK_USER.avatar} alt={MOCK_USER.username} />
-                    <AvatarFallback>{MOCK_USER.username.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Sidebar */}
+          <div className="col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                  <CardTitle>Profile</CardTitle>
+                  {!editMode && (
+                    <Button variant="ghost" size="icon" onClick={() => setEditMode(true)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-                <div className="text-center mb-4">
-                  <h2 className="text-xl font-bold">{MOCK_USER.username}</h2>
-                  <p className="text-sm text-muted-foreground">Member since July 2023</p>
-                </div>
-                <div className="flex justify-center space-x-2">
-                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                    Rookie
-                  </span>
-                  <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-xs font-medium">
-                    Rank #24
-                  </span>
-                </div>
-              </div>
-            </Card>
-            
-            {/* Navigation */}
-            <Card className="glass-card">
-              <CardContent className="p-0">
-                <nav className="flex flex-col">
-                  <a 
-                    href="#overview" 
-                    className="flex items-center space-x-3 px-4 py-3 text-primary font-medium border-l-2 border-primary"
-                  >
-                    <User className="h-5 w-5" />
-                    <span>Overview</span>
-                  </a>
-                  <a 
-                    href="#bet-history" 
-                    className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <History className="h-5 w-5" />
-                    <span>Bet History</span>
-                  </a>
-                  <a 
-                    href="#achievements" 
-                    className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Award className="h-5 w-5" />
-                    <span>Achievements</span>
-                  </a>
-                  <a 
-                    href="/settings" 
-                    className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Settings className="h-5 w-5" />
-                    <span>Settings</span>
-                  </a>
-                </nav>
-              </CardContent>
-            </Card>
-            
-            {/* Balance Card */}
-            <Card className="glass-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Your Balance</CardTitle>
+                <CardDescription>Manage your account</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold mb-2">{MOCK_USER.balance.toLocaleString()} LP</div>
-                <div className="text-xs text-muted-foreground mb-4">
-                  {totalProfit >= 0 ? (
-                    <span className="text-green-500">+{totalProfit.toLocaleString()} LP</span>
-                  ) : (
-                    <span className="text-red-500">{totalProfit.toLocaleString()} LP</span>
-                  )} lifetime profit
-                </div>
-                <Button className="w-full" size="sm">Get Daily Bonus</Button>
+              <CardContent className="flex flex-col items-center text-center">
+                <Avatar className="h-20 w-20 mb-4">
+                  <AvatarImage src="" />
+                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                    {username ? username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {editMode ? (
+                  <div className="w-full space-y-4">
+                    <div>
+                      <label className="text-sm text-muted-foreground">Username</label>
+                      <Input 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Enter username"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setEditMode(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleSaveProfile}
+                        className="flex-1"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-xl font-semibold">{profile?.username || "Anonymous User"}</h2>
+                    <p className="text-muted-foreground text-sm mt-1">{user?.email}</p>
+                    
+                    <div className="w-full mt-6 space-y-4">
+                      <div className="flex items-center justify-between py-2 border-b">
+                        <div className="flex items-center">
+                          <Wallet className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span>Balance</span>
+                        </div>
+                        <span className="font-medium">{profile?.balance?.toLocaleString() || "0"} LP</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2 border-b">
+                        <div className="flex items-center">
+                          <Trophy className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span>Bets Won</span>
+                        </div>
+                        <span className="font-medium">{profile?.bets_won || "0"}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2 border-b">
+                        <div className="flex items-center">
+                          <BarChart2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span>Win Rate</span>
+                        </div>
+                        <span className="font-medium">{(winRate * 100).toFixed(1)}%</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center">
+                          <Award className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span>Rank</span>
+                        </div>
+                        <span className="font-medium">#-</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
+              <CardFooter className="flex flex-col gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </CardFooter>
             </Card>
           </div>
           
-          {/* Main Content */}
-          <div className="lg:col-span-9 space-y-6">
-            {/* Stats Overview */}
-            <Card className="glass-card" id="overview">
-              <CardHeader>
-                <CardTitle>Betting Performance</CardTitle>
-                <CardDescription>Your betting statistics and performance metrics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-secondary/30 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Win Rate</p>
-                    <p className="text-2xl font-bold">{winPercentage.toFixed(1)}%</p>
-                    <div className="w-full bg-secondary/70 rounded-full h-1.5 mt-2">
-                      <div 
-                        className="bg-green-500 h-1.5 rounded-full"
-                        style={{ width: `${winPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
+          {/* Main Content Area */}
+          <div className="col-span-1 lg:col-span-2">
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full md:w-auto grid-cols-3 mb-8">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="history">Betting History</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Bets</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{bets?.length || 0}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {wonBets.length} won / {lostBets.length} lost / {pendingBets.length} pending
+                      </div>
+                    </CardContent>
+                  </Card>
                   
-                  <div className="bg-secondary/30 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Total Bets</p>
-                    <p className="text-2xl font-bold">{totalBets}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {MOCK_USER.betsWon} wins, {MOCK_USER.betsLost} losses
-                    </p>
-                  </div>
-                  
-                  <div className="bg-secondary/30 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Total Wagered</p>
-                    <p className="text-2xl font-bold">{totalWagered.toLocaleString()} LP</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Across {totalBets} bets
-                    </p>
-                  </div>
-                  
-                  <div className="bg-secondary/30 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Avg. Bet Size</p>
-                    <p className="text-2xl font-bold">
-                      {(totalWagered / totalBets).toFixed(0)} LP
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      ROI: {(totalProfit / totalWagered * 100).toFixed(2)}%
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="text-center pt-4 pb-2">
-                  <Button variant="outline">View Detailed Statistics</Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Recent Bets */}
-            <Card className="glass-card" id="bet-history">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Bets</CardTitle>
-                  <CardDescription>Your most recent betting activity</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="hidden md:flex items-center gap-1">
-                  <History className="h-4 w-4 mr-1" />
-                  View All History
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="all">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="all">All Bets</TabsTrigger>
-                    <TabsTrigger value="wins">Wins</TabsTrigger>
-                    <TabsTrigger value="losses">Losses</TabsTrigger>
-                    <TabsTrigger value="pending">Pending</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="all">
-                    <div className="space-y-4">
-                      {isLoading ? (
-                        <div className="space-y-3">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="animate-pulse flex items-center p-4 rounded-lg bg-secondary/30">
-                              <div className="w-12 h-8 bg-secondary/50 rounded mr-4"></div>
-                              <div className="flex-1 space-y-2">
-                                <div className="h-4 bg-secondary/50 rounded w-3/4"></div>
-                                <div className="h-3 bg-secondary/50 rounded w-1/2"></div>
-                              </div>
-                              <div className="w-16 h-6 bg-secondary/50 rounded"></div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div>
-                          {MOCK_BET_HISTORY.map((bet) => (
-                            <div
-                              key={bet.id}
-                              className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-secondary/30 mb-3 hover:bg-secondary/50 transition-colors"
-                            >
-                              <div className="flex items-center mb-2 md:mb-0">
-                                <div className="flex-shrink-0 w-16 mr-4 text-center">
-                                  <div className="font-medium">
-                                    {bet.match.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {bet.match.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <div className="font-medium">
-                                    {bet.match.teamA.name} vs {bet.match.teamB.name}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground flex items-center">
-                                    <span className="mr-2">{bet.match.league.name}</span>
-                                    <span>• Bet on {bet.betOn}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between md:justify-end mt-2 md:mt-0">
-                                <div className="md:mr-6 flex flex-col md:items-end">
-                                  <div className="text-sm font-medium">
-                                    {bet.amount.toLocaleString()} LP @ {bet.odds.toFixed(2)}
-                                  </div>
-                                  <div className="text-xs">
-                                    Potential: {(bet.amount * bet.odds).toFixed(0)} LP
-                                  </div>
-                                </div>
-                                <div className="md:w-24 text-right">
-                                  {bet.result === 'win' && (
-                                    <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium">
-                                      +{bet.profit.toLocaleString()} LP
-                                    </span>
-                                  )}
-                                  {bet.result === 'loss' && (
-                                    <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium">
-                                      {bet.profit.toLocaleString()} LP
-                                    </span>
-                                  )}
-                                  {bet.result === 'pending' && (
-                                    <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-xs font-medium">
-                                      Pending
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  
-                  <TabsContent value="wins">
-                    <div className="space-y-4">
-                      {MOCK_BET_HISTORY.filter(bet => bet.result === 'win').map((bet) => (
-                        <div
-                          key={bet.id}
-                          className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-secondary/30 mb-3"
-                        >
-                          <div className="flex items-center mb-2 md:mb-0">
-                            <div className="flex-shrink-0 w-16 mr-4 text-center">
-                              <div className="font-medium">
-                                {bet.match.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {bet.match.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <div className="font-medium">
-                                {bet.match.teamA.name} vs {bet.match.teamB.name}
-                              </div>
-                              <div className="text-xs text-muted-foreground flex items-center">
-                                <span className="mr-2">{bet.match.league.name}</span>
-                                <span>• Bet on {bet.betOn}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between md:justify-end mt-2 md:mt-0">
-                            <div className="md:mr-6 flex flex-col md:items-end">
-                              <div className="text-sm font-medium">
-                                {bet.amount.toLocaleString()} LP @ {bet.odds.toFixed(2)}
-                              </div>
-                              <div className="text-xs">
-                                Potential: {(bet.amount * bet.odds).toFixed(0)} LP
-                              </div>
-                            </div>
-                            <div className="md:w-24 text-right">
-                              <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-medium">
-                                +{bet.profit.toLocaleString()} LP
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {MOCK_BET_HISTORY.filter(bet => bet.result === 'win').length === 0 && (
-                        <div className="text-center py-8">
-                          <div className="mb-3 flex justify-center">
-                            <AlertCircle className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <p className="text-muted-foreground">No winning bets found</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="losses">
-                    <div className="space-y-4">
-                      {MOCK_BET_HISTORY.filter(bet => bet.result === 'loss').map((bet) => (
-                        <div
-                          key={bet.id}
-                          className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-secondary/30 mb-3"
-                        >
-                          <div className="flex items-center mb-2 md:mb-0">
-                            <div className="flex-shrink-0 w-16 mr-4 text-center">
-                              <div className="font-medium">
-                                {bet.match.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {bet.match.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <div className="font-medium">
-                                {bet.match.teamA.name} vs {bet.match.teamB.name}
-                              </div>
-                              <div className="text-xs text-muted-foreground flex items-center">
-                                <span className="mr-2">{bet.match.league.name}</span>
-                                <span>• Bet on {bet.betOn}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between md:justify-end mt-2 md:mt-0">
-                            <div className="md:mr-6 flex flex-col md:items-end">
-                              <div className="text-sm font-medium">
-                                {bet.amount.toLocaleString()} LP @ {bet.odds.toFixed(2)}
-                              </div>
-                              <div className="text-xs">
-                                Potential: {(bet.amount * bet.odds).toFixed(0)} LP
-                              </div>
-                            </div>
-                            <div className="md:w-24 text-right">
-                              <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium">
-                                {bet.profit.toLocaleString()} LP
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {MOCK_BET_HISTORY.filter(bet => bet.result === 'loss').length === 0 && (
-                        <div className="text-center py-8">
-                          <div className="mb-3 flex justify-center">
-                            <AlertCircle className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <p className="text-muted-foreground">No losing bets found</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="pending">
-                    <div className="space-y-4">
-                      {MOCK_BET_HISTORY.filter(bet => bet.result === 'pending').map((bet) => (
-                        <div
-                          key={bet.id}
-                          className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-secondary/30 mb-3"
-                        >
-                          <div className="flex items-center mb-2 md:mb-0">
-                            <div className="flex-shrink-0 w-16 mr-4 text-center">
-                              <div className="font-medium">
-                                {bet.match.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {bet.match.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <div className="font-medium">
-                                {bet.match.teamA.name} vs {bet.match.teamB.name}
-                              </div>
-                              <div className="text-xs text-muted-foreground flex items-center">
-                                <span className="mr-2">{bet.match.league.name}</span>
-                                <span>• Bet on {bet.betOn}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between md:justify-end mt-2 md:mt-0">
-                            <div className="md:mr-6 flex flex-col md:items-end">
-                              <div className="text-sm font-medium">
-                                {bet.amount.toLocaleString()} LP @ {bet.odds.toFixed(2)}
-                              </div>
-                              <div className="text-xs">
-                                Potential: {(bet.amount * bet.odds).toFixed(0)} LP
-                              </div>
-                            </div>
-                            <div className="md:w-24 text-right">
-                              <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-xs font-medium">
-                                Pending
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {MOCK_BET_HISTORY.filter(bet => bet.result === 'pending').length === 0 && (
-                        <div className="text-center py-8">
-                          <div className="mb-3 flex justify-center">
-                            <AlertCircle className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <p className="text-muted-foreground">No pending bets</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-                
-                <div className="text-center mt-6 md:hidden">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <History className="h-4 w-4 mr-2" />
-                    View All History
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Achievements */}
-            <Card className="glass-card" id="achievements">
-              <CardHeader>
-                <CardTitle>Achievements</CardTitle>
-                <CardDescription>Unlock badges by completing challenges</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  {isLoading ? (
-                    <>
-                      {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="animate-pulse p-4 rounded-lg bg-secondary/30">
-                          <div className="flex items-start space-x-4">
-                            <div className="w-12 h-12 rounded-full bg-secondary/50"></div>
-                            <div className="flex-1 space-y-2">
-                              <div className="h-4 bg-secondary/50 rounded w-1/2"></div>
-                              <div className="h-3 bg-secondary/50 rounded w-3/4"></div>
-                              <div className="h-2 bg-secondary/50 rounded w-full"></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {MOCK_ACHIEVEMENTS.map((achievement) => (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Win Rate</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">{(winRate * 100).toFixed(1)}%</div>
+                      <div className="w-full bg-secondary rounded-full h-1.5 mt-2">
                         <div 
-                          key={achievement.id}
-                          className={`p-4 rounded-lg ${achievement.completed ? 'bg-primary/10' : 'bg-secondary/30'}`}
-                        >
-                          <div className="flex items-start space-x-4">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              achievement.completed ? 'bg-primary/20' : 'bg-secondary/50'
-                            }`}>
-                              {achievement.icon}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-semibold">{achievement.name}</h4>
-                                {achievement.completed && (
-                                  <span className="text-xs font-medium text-green-500 flex items-center">
-                                    <BadgeCheck className="h-3 w-3 mr-1" />
-                                    Unlocked
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
-                              <div className="space-y-1">
-                                <Progress value={achievement.progress} className="h-1.5" />
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                  {achievement.completed ? (
-                                    <span>Completed {achievement.date.toLocaleDateString()}</span>
-                                  ) : (
-                                    <>
-                                      <span>Progress: {achievement.current} / {achievement.required}</span>
-                                      <span>{achievement.progress}%</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
+                          className="bg-green-500 h-1.5 rounded-full"
+                          style={{ width: `${(winRate * 100)}%` }}
+                        ></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Current Balance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{profile?.balance?.toLocaleString() || "0"} LP</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Betting Power
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
                 
-                <div className="text-center">
-                  <Button variant="outline">View All Achievements</Button>
-                </div>
-              </CardContent>
-            </Card>
+                {/* Recent Activity */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Activity</CardTitle>
+                    <CardDescription>Your latest betting activities</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {bets && bets.length > 0 ? (
+                      <div className="space-y-4">
+                        {bets.slice(0, 5).map((bet) => (
+                          <div key={bet.id} className="flex justify-between items-center p-3 border rounded-lg">
+                            <div>
+                              <p className="font-medium">Bet on Match #{bet.match_id.substring(0, 6)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(bet.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                bet.status === 'won' ? 'bg-green-100 text-green-800' :
+                                bet.status === 'lost' ? 'bg-red-100 text-red-800' :
+                                'bg-amber-100 text-amber-800'
+                              }`}>
+                                {bet.status.charAt(0).toUpperCase() + bet.status.slice(1)}
+                              </span>
+                              <span className="font-semibold">{bet.amount} LP</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border border-dashed rounded-lg">
+                        <p className="text-muted-foreground">No betting activity yet</p>
+                        <a 
+                          href="/matches" 
+                          className="inline-block mt-4 text-primary text-sm font-medium"
+                        >
+                          Browse Matches to Bet
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                  {bets && bets.length > 5 && (
+                    <CardFooter>
+                      <a 
+                        href="/my-bets" 
+                        className="text-primary text-sm font-medium hover:underline"
+                      >
+                        View All Activity
+                      </a>
+                    </CardFooter>
+                  )}
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="history">
+                <a href="/my-bets" className="inline-block mb-4 text-primary hover:underline">
+                  View detailed betting history
+                </a>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Betting Summary</CardTitle>
+                    <CardDescription>Overview of your betting activity</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {bets && bets.length > 0 ? (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="text-center p-4 bg-secondary/20 rounded-lg">
+                            <p className="text-muted-foreground text-sm">Total</p>
+                            <p className="text-2xl font-bold mt-1">{bets.length}</p>
+                          </div>
+                          <div className="text-center p-4 bg-green-100 rounded-lg">
+                            <p className="text-green-800 text-sm">Won</p>
+                            <p className="text-2xl font-bold mt-1 text-green-800">{wonBets.length}</p>
+                          </div>
+                          <div className="text-center p-4 bg-red-100 rounded-lg">
+                            <p className="text-red-800 text-sm">Lost</p>
+                            <p className="text-2xl font-bold mt-1 text-red-800">{lostBets.length}</p>
+                          </div>
+                        </div>
+                        
+                        {/* We could add a chart here in the future */}
+                        <div className="text-center text-muted-foreground text-sm">
+                          Detailed statistics and charts coming soon!
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">You haven't placed any bets yet</p>
+                        <a 
+                          href="/matches" 
+                          className="inline-block mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium"
+                        >
+                          Browse Matches
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="settings">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Account Settings</CardTitle>
+                    <CardDescription>Manage your account preferences</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium block mb-1">Email</label>
+                      <Input value={user?.email || ""} disabled />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Email cannot be changed
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium block mb-1">Username</label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={username} 
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Enter username"
+                        />
+                        <Button onClick={handleSaveProfile} disabled={isLoading}>
+                          {isLoading ? "Saving..." : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <label className="text-sm font-medium block mb-1 text-red-500">Danger Zone</label>
+                      <Button variant="destructive" onClick={handleSignOut}>
+                        Sign Out
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>

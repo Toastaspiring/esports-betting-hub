@@ -1,155 +1,95 @@
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Search, Trophy, TrendingUp, Award, Users } from 'lucide-react';
-import { MOCK_USER } from '@/lib/constants';
-
-// Mock leaderboard data for demonstration
-const MOCK_LEADERBOARD = [
-  {
-    id: 1,
-    username: "Faker",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    winRate: 0.72,
-    balance: 28500,
-    betsWon: 45,
-    betsLost: 13,
-    rank: 1,
-    badge: "Legendary"
-  },
-  {
-    id: 2,
-    username: "Uzi",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    winRate: 0.68,
-    balance: 22300,
-    betsWon: 42,
-    betsLost: 18,
-    rank: 2,
-    badge: "Veteran"
-  },
-  {
-    id: 3,
-    username: "Perkz",
-    avatar: "https://i.pravatar.cc/150?img=3",
-    winRate: 0.65,
-    balance: 19400,
-    betsWon: 38,
-    betsLost: 20,
-    rank: 3,
-    badge: "Veteran"
-  },
-  {
-    id: 4,
-    username: "Caps",
-    avatar: "https://i.pravatar.cc/150?img=4", 
-    winRate: 0.63,
-    balance: 18200,
-    betsWon: 35,
-    betsLost: 21,
-    rank: 4,
-    badge: "Pro"
-  },
-  {
-    id: 5,
-    username: "Bjergsen",
-    avatar: "https://i.pravatar.cc/150?img=5",
-    winRate: 0.61,
-    balance: 16800,
-    betsWon: 33,
-    betsLost: 21,
-    rank: 5,
-    badge: "Pro"
-  },
-  {
-    id: 6,
-    username: "Rekkles",
-    avatar: "https://i.pravatar.cc/150?img=6",
-    winRate: 0.60,
-    balance: 15500,
-    betsWon: 30,
-    betsLost: 20,
-    rank: 6,
-    badge: "Expert"
-  },
-  {
-    id: 7,
-    username: "Doublelift",
-    avatar: "https://i.pravatar.cc/150?img=7",
-    winRate: 0.58,
-    balance: 14300,
-    betsWon: 29,
-    betsLost: 21,
-    rank: 7,
-    badge: "Expert"
-  },
-  // Current user somewhere in the middle
-  {
-    id: 8,
-    username: MOCK_USER.username,
-    avatar: MOCK_USER.avatar,
-    winRate: MOCK_USER.winRate,
-    balance: MOCK_USER.balance,
-    betsWon: MOCK_USER.betsWon,
-    betsLost: MOCK_USER.betsLost,
-    rank: 24,
-    badge: "Rookie"
-  },
-  {
-    id: 9,
-    username: "TheShy",
-    avatar: "https://i.pravatar.cc/150?img=8",
-    winRate: 0.54,
-    balance: 9500,
-    betsWon: 27,
-    betsLost: 23,
-    rank: 43,
-    badge: "Rookie"
-  },
-  {
-    id: 10,
-    username: "Chovy",
-    avatar: "https://i.pravatar.cc/150?img=9",
-    winRate: 0.52,
-    balance: 8900,
-    betsWon: 26,
-    betsLost: 24,
-    rank: 51,
-    badge: "Rookie"
-  },
-];
+import { Search, Trophy, TrendingUp, Award, Users, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 
 const Leaderboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState(MOCK_LEADERBOARD);
-  
+  const [users, setUsers] = useState<any[]>([]);
+  const { toast } = useToast();
+  const { user: currentAuthUser } = useSupabase();
+
+  // Fetch users data from the profiles table
+  const { data, isLoading: isLoadingUsers, error } = useQuery({
+    queryKey: ['leaderboardUsers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('balance', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
+    if (data) {
+      // Transform the data to include rank
+      const rankedUsers = data.map((user, index) => ({
+        ...user,
+        rank: index + 1,
+        badge: getBadgeForRank(index + 1),
+        winRate: user.bets_won && (user.bets_won + user.bets_lost) > 0
+          ? user.bets_won / (user.bets_won + user.bets_lost)
+          : 0
+      }));
+      setUsers(rankedUsers);
       setIsLoading(false);
-    }, 800);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [data]);
+
+  // Helper function to determine badge based on rank
+  const getBadgeForRank = (rank: number) => {
+    if (rank <= 3) return "Legendary";
+    if (rank <= 10) return "Veteran";
+    if (rank <= 20) return "Pro";
+    if (rank <= 50) return "Expert";
+    return "Rookie";
+  };
   
   // Filter users based on search query
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setUsers(MOCK_LEADERBOARD);
-    } else {
-      const filtered = MOCK_LEADERBOARD.filter(user => 
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setUsers(filtered);
+    if (data) {
+      if (searchQuery.trim() === '') {
+        setUsers(data.map((user, index) => ({
+          ...user,
+          rank: index + 1,
+          badge: getBadgeForRank(index + 1),
+          winRate: user.bets_won && (user.bets_won + user.bets_lost) > 0
+            ? user.bets_won / (user.bets_won + user.bets_lost)
+            : 0
+        })));
+      } else {
+        const allUsers = data.map((user, index) => ({
+          ...user,
+          rank: index + 1,
+          badge: getBadgeForRank(index + 1),
+          winRate: user.bets_won && (user.bets_won + user.bets_lost) > 0
+            ? user.bets_won / (user.bets_won + user.bets_lost)
+            : 0
+        }));
+        
+        const filtered = allUsers.filter(user => 
+          user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setUsers(filtered);
+      }
     }
-  }, [searchQuery]);
+  }, [searchQuery, data]);
   
   // Find current user
-  const currentUser = users.find(user => user.username === MOCK_USER.username);
+  const currentUser = currentAuthUser 
+    ? users.find(user => user.id === currentAuthUser.id)
+    : null;
   
   return (
     <div className="min-h-screen bg-background">
@@ -188,17 +128,27 @@ const Leaderboard = () => {
                 <Trophy className="h-4 w-4 text-amber-400" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-3">
-                  <img 
-                    src={users[0]?.avatar || "https://i.pravatar.cc/150?img=1"} 
-                    alt={users[0]?.username || "Top Player"}
-                    className="h-10 w-10 rounded-full border border-primary/20" 
-                  />
-                  <div>
-                    <p className="text-lg font-semibold">{users[0]?.username || "Loading..."}</p>
-                    <p className="text-xs text-muted-foreground">{users[0]?.balance.toLocaleString() || "0"} LP</p>
+                {isLoading || isLoadingUsers ? (
+                  <div className="flex items-center space-x-3 animate-pulse">
+                    <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                    </div>
                   </div>
-                </div>
+                ) : users.length > 0 ? (
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 rounded-full border border-primary/20 flex items-center justify-center bg-gray-100 text-gray-800 font-bold">
+                      {users[0]?.username?.charAt(0) || '?'}
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold">{users[0]?.username || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">{users[0]?.balance?.toLocaleString() || "0"} LP</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No players found</p>
+                )}
               </CardContent>
             </Card>
             
@@ -208,21 +158,39 @@ const Leaderboard = () => {
                 <TrendingUp className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-3">
-                  <img 
-                    src={users.sort((a, b) => b.winRate - a.winRate)[0]?.avatar || "https://i.pravatar.cc/150?img=1"} 
-                    alt="Best Win Rate"
-                    className="h-10 w-10 rounded-full border border-primary/20" 
-                  />
-                  <div>
-                    <p className="text-lg font-semibold">
-                      {users.sort((a, b) => b.winRate - a.winRate)[0]?.username || "Loading..."}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {((users.sort((a, b) => b.winRate - a.winRate)[0]?.winRate || 0) * 100).toFixed(1)}% Win Rate
-                    </p>
+                {isLoading || isLoadingUsers ? (
+                  <div className="flex items-center space-x-3 animate-pulse">
+                    <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                    </div>
                   </div>
-                </div>
+                ) : users.length > 0 ? (
+                  <div className="flex items-center space-x-3">
+                    {(() => {
+                      const sortedByWinRate = [...users].sort((a, b) => b.winRate - a.winRate);
+                      const topUser = sortedByWinRate[0];
+                      return (
+                        <>
+                          <div className="h-10 w-10 rounded-full border border-primary/20 flex items-center justify-center bg-gray-100 text-gray-800 font-bold">
+                            {topUser?.username?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold">
+                              {topUser?.username || "Unknown"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(topUser?.winRate * 100).toFixed(1)}% Win Rate
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No players found</p>
+                )}
               </CardContent>
             </Card>
             
@@ -232,19 +200,31 @@ const Leaderboard = () => {
                 <Award className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary">#{currentUser?.rank || "--"}</span>
+                {isLoading || isLoadingUsers ? (
+                  <div className="flex items-center space-x-3 animate-pulse">
+                    <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold">
-                      {currentUser ? `${currentUser.rank} / ${users.length}` : "Loading..."}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {currentUser?.badge || "Unranked"}
-                    </p>
+                ) : currentUser ? (
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">#{currentUser.rank || "--"}</span>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold">
+                        {currentUser?.rank ? `${currentUser.rank} / ${users.length}` : "Not ranked"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {currentUser?.badge || "Unranked"}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Log in to see your rank</p>
+                )}
               </CardContent>
             </Card>
             
@@ -254,10 +234,18 @@ const Leaderboard = () => {
                 <Users className="h-4 w-4 text-violet-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{users.length}</div>
-                <div className="text-xs text-muted-foreground">
-                  Active during this season
-                </div>
+                {isLoading || isLoadingUsers ? (
+                  <div className="animate-pulse">
+                    <div className="h-8 w-16 bg-gray-200 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{users.length}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Active during this season
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -271,7 +259,7 @@ const Leaderboard = () => {
             </TabsList>
             
             <TabsContent value="balance" className="space-y-4">
-              {isLoading ? (
+              {isLoading || isLoadingUsers ? (
                 <div className="space-y-4">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="flex justify-between items-center p-4 rounded-lg bg-secondary/30 animate-pulse">
@@ -286,6 +274,14 @@ const Leaderboard = () => {
                     </div>
                   ))}
                 </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  Failed to load leaderboard data. Please try again later.
+                </div>
+              ) : users.length === 0 ? (
+                <div className="text-center py-8">
+                  No users found. Try adjusting your search criteria.
+                </div>
               ) : (
                 <div className="space-y-2">
                   {users
@@ -294,7 +290,7 @@ const Leaderboard = () => {
                       <div 
                         key={user.id}
                         className={`flex justify-between items-center p-4 rounded-lg ${
-                          user.username === MOCK_USER.username
+                          currentAuthUser && user.id === currentAuthUser.id
                             ? 'bg-primary/10 border border-primary/20'
                             : 'bg-secondary/30 hover:bg-secondary/50'
                         } transition-colors`}
@@ -306,20 +302,18 @@ const Leaderboard = () => {
                                 {user.rank}
                               </div>
                             )}
-                            <img
-                              src={user.avatar}
-                              alt={user.username}
-                              className="w-10 h-10 rounded-full border border-white/10"
-                            />
+                            <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-gray-100 text-gray-800 font-bold">
+                              {user.username?.charAt(0) || '?'}
+                            </div>
                           </div>
                           <div>
-                            <p className="font-semibold">{user.username}</p>
+                            <p className="font-semibold">{user.username || `User-${user.id.substring(0, 6)}`}</p>
                             <p className="text-xs text-muted-foreground">
-                              {user.betsWon} wins / {user.betsLost} losses
+                              {user.bets_won || 0} wins / {user.bets_lost || 0} losses
                             </p>
                           </div>
                         </div>
-                        <div className="text-lg font-bold">{user.balance.toLocaleString()} LP</div>
+                        <div className="text-lg font-bold">{(user.balance || 0).toLocaleString()} LP</div>
                       </div>
                     ))}
                 </div>
@@ -327,7 +321,7 @@ const Leaderboard = () => {
             </TabsContent>
             
             <TabsContent value="winrate" className="space-y-4">
-              {isLoading ? (
+              {isLoading || isLoadingUsers ? (
                 <div className="space-y-4">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="flex justify-between items-center p-4 rounded-lg bg-secondary/30 animate-pulse">
@@ -342,6 +336,14 @@ const Leaderboard = () => {
                     </div>
                   ))}
                 </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  Failed to load leaderboard data. Please try again later.
+                </div>
+              ) : users.length === 0 ? (
+                <div className="text-center py-8">
+                  No users found. Try adjusting your search criteria.
+                </div>
               ) : (
                 <div className="space-y-2">
                   {users
@@ -350,7 +352,7 @@ const Leaderboard = () => {
                       <div 
                         key={user.id}
                         className={`flex justify-between items-center p-4 rounded-lg ${
-                          user.username === MOCK_USER.username
+                          currentAuthUser && user.id === currentAuthUser.id
                             ? 'bg-primary/10 border border-primary/20'
                             : 'bg-secondary/30 hover:bg-secondary/50'
                         } transition-colors`}
@@ -362,16 +364,14 @@ const Leaderboard = () => {
                                 {index + 1}
                               </div>
                             )}
-                            <img
-                              src={user.avatar}
-                              alt={user.username}
-                              className="w-10 h-10 rounded-full border border-white/10"
-                            />
+                            <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-gray-100 text-gray-800 font-bold">
+                              {user.username?.charAt(0) || '?'}
+                            </div>
                           </div>
                           <div>
-                            <p className="font-semibold">{user.username}</p>
+                            <p className="font-semibold">{user.username || `User-${user.id.substring(0, 6)}`}</p>
                             <p className="text-xs text-muted-foreground">
-                              {user.betsWon} wins / {user.betsLost} losses
+                              {user.bets_won || 0} wins / {user.bets_lost || 0} losses
                             </p>
                           </div>
                         </div>
