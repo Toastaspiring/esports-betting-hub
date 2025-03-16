@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import Navbar from "@/components/Navbar";
 
 const MyBets = () => {
   const { session } = useSupabase();
@@ -32,13 +33,16 @@ const MyBets = () => {
 
   if (!session) {
     return (
-      <div className="container max-w-6xl py-6 px-4 md:py-10 bg-background">
-        <Card>
-          <CardHeader>
-            <CardTitle>My Bets</CardTitle>
-            <CardDescription>Please login to view your bets</CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container max-w-6xl py-6 px-4 md:py-10">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Bets</CardTitle>
+              <CardDescription>Please login to view your bets</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -47,67 +51,70 @@ const MyBets = () => {
   const isSettled = (bet) => bet.status === 'settled' || bet.status === 'won' || bet.status === 'lost';
 
   return (
-    <div className="container max-w-6xl py-6 px-4 md:py-10 bg-background">
-      <h1 className="text-3xl font-bold mb-6">My Bets</h1>
-      
-      <Tabs defaultValue="active">
-        <TabsList className="mb-4">
-          <TabsTrigger value="active">Active Bets</TabsTrigger>
-          <TabsTrigger value="settled">Settled Bets</TabsTrigger>
-        </TabsList>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container max-w-6xl py-20 px-4 md:py-24">
+        <h1 className="text-3xl font-bold mb-6">My Bets</h1>
         
-        <TabsContent value="active">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Bets</CardTitle>
-              <CardDescription>Bets on upcoming or in-progress matches</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center p-4">
-                  <p>Loading your bets...</p>
-                </div>
-              ) : bets?.filter(bet => !isSettled(bet)).length === 0 ? (
-                <div className="text-center p-4">
-                  <p className="text-muted-foreground">You don't have any active bets</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {bets?.filter(bet => !isSettled(bet)).map((bet) => (
-                    <BetItem key={bet.id} bet={bet} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settled">
-          <Card>
-            <CardHeader>
-              <CardTitle>Settled Bets</CardTitle>
-              <CardDescription>History of your completed bets</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center p-4">
-                  <p>Loading your bets...</p>
-                </div>
-              ) : bets?.filter(bet => isSettled(bet)).length === 0 ? (
-                <div className="text-center p-4">
-                  <p className="text-muted-foreground">You don't have any settled bets yet</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {bets?.filter(bet => isSettled(bet)).map((bet) => (
-                    <BetItem key={bet.id} bet={bet} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <Tabs defaultValue="active">
+          <TabsList className="mb-4">
+            <TabsTrigger value="active">Active Bets</TabsTrigger>
+            <TabsTrigger value="settled">Settled Bets</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="active">
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Bets</CardTitle>
+                <CardDescription>Bets on upcoming or in-progress matches</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center p-4">
+                    <p>Loading your bets...</p>
+                  </div>
+                ) : bets?.filter(bet => !isSettled(bet)).length === 0 ? (
+                  <div className="text-center p-4">
+                    <p className="text-muted-foreground">You don't have any active bets</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bets?.filter(bet => !isSettled(bet)).map((bet) => (
+                      <BetItem key={bet.id} bet={bet} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="settled">
+            <Card>
+              <CardHeader>
+                <CardTitle>Settled Bets</CardTitle>
+                <CardDescription>History of your completed bets</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex justify-center p-4">
+                    <p>Loading your bets...</p>
+                  </div>
+                ) : bets?.filter(bet => isSettled(bet)).length === 0 ? (
+                  <div className="text-center p-4">
+                    <p className="text-muted-foreground">You don't have any settled bets yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bets?.filter(bet => isSettled(bet)).map((bet) => (
+                      <BetItem key={bet.id} bet={bet} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };

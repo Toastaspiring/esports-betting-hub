@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabase } from "@/hooks/useSupabase";
@@ -11,8 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Wallet, Trophy, BarChart2, Award, UserRound, User, LogOut, Edit } from 'lucide-react';
+import { Wallet, Trophy, BarChart2, Award, UserRound, User, LogOut, Edit, RefreshCw } from 'lucide-react';
 import { signOut } from '@/services/supabaseService';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Profile = () => {
   const { user } = useSupabase();
@@ -20,9 +20,10 @@ const Profile = () => {
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [username, setUsername] = useState("");
+  const [riotId, setRiotId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnectingRiot, setIsConnectingRiot] = useState(false);
   
-  // Fetch user profile data
   const { data: profile, isLoading: profileLoading, refetch } = useQuery({
     queryKey: ['profileDetails', user?.id],
     queryFn: async () => {
@@ -40,7 +41,6 @@ const Profile = () => {
     enabled: !!user,
   });
   
-  // Fetch user bets data
   const { data: bets } = useQuery({
     queryKey: ['userBets', user?.id],
     queryFn: async () => {
@@ -67,6 +67,7 @@ const Profile = () => {
   useEffect(() => {
     if (profile) {
       setUsername(profile.username || "");
+      setRiotId(profile.riot_id || "");
     }
   }, [profile]);
   
@@ -114,7 +115,38 @@ const Profile = () => {
     }
   };
   
-  // Calculate stats
+  const connectRiotAccount = async () => {
+    if (!riotId || !user) return;
+    
+    setIsConnectingRiot(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          riot_id: riotId,
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Riot Account Connected",
+        description: "Your Riot Games account has been successfully linked.",
+      });
+      
+      refetch();
+    } catch (error) {
+      console.error('Error linking Riot account:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to link Riot Games account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnectingRiot(false);
+    }
+  };
+  
   const winRate = profile?.bets_won && (profile.bets_won + profile.bets_lost) > 0
     ? profile.bets_won / (profile.bets_won + profile.bets_lost)
     : 0;
@@ -142,7 +174,6 @@ const Profile = () => {
       
       <main className="container pt-24 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Sidebar */}
           <div className="col-span-1">
             <Card className="sticky top-24">
               <CardHeader className="pb-4">
@@ -158,7 +189,7 @@ const Profile = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center text-center">
                 <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage src="" />
+                  <AvatarImage src={profile?.avatar_url || ""} />
                   <AvatarFallback className="bg-primary/10 text-primary text-lg">
                     {username ? username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
@@ -196,6 +227,12 @@ const Profile = () => {
                   <>
                     <h2 className="text-xl font-semibold">{profile?.username || "Anonymous User"}</h2>
                     <p className="text-muted-foreground text-sm mt-1">{user?.email}</p>
+                    
+                    {profile?.riot_id ? (
+                      <div className="mt-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                        Riot ID: {profile.riot_id}
+                      </div>
+                    ) : null}
                     
                     <div className="w-full mt-6 space-y-4">
                       <div className="flex items-center justify-between py-2 border-b">
@@ -246,7 +283,6 @@ const Profile = () => {
             </Card>
           </div>
           
-          {/* Main Content Area */}
           <div className="col-span-1 lg:col-span-2">
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="grid w-full md:w-auto grid-cols-3 mb-8">
@@ -256,7 +292,6 @@ const Profile = () => {
               </TabsList>
               
               <TabsContent value="overview">
-                {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                   <Card>
                     <CardHeader className="pb-2">
@@ -298,7 +333,6 @@ const Profile = () => {
                   </Card>
                 </div>
                 
-                {/* Recent Activity */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Recent Activity</CardTitle>
@@ -381,7 +415,6 @@ const Profile = () => {
                           </div>
                         </div>
                         
-                        {/* We could add a chart here in the future */}
                         <div className="text-center text-muted-foreground text-sm">
                           Detailed statistics and charts coming soon!
                         </div>
@@ -407,30 +440,92 @@ const Profile = () => {
                     <CardTitle>Account Settings</CardTitle>
                     <CardDescription>Manage your account preferences</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium block mb-1">Email</label>
-                      <Input value={user?.email || ""} disabled />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Email cannot be changed
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium block mb-1">Username</label>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={username} 
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="Enter username"
-                        />
-                        <Button onClick={handleSaveProfile} disabled={isLoading}>
-                          {isLoading ? "Saving..." : "Save"}
-                        </Button>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Profile Information</h3>
+                      
+                      <div>
+                        <label className="text-sm font-medium block mb-1">Email</label>
+                        <Input value={user?.email || ""} disabled />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Email cannot be changed
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium block mb-1">Username</label>
+                        <div className="flex gap-2">
+                          <Input 
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Enter username"
+                          />
+                          <Button onClick={handleSaveProfile} disabled={isLoading}>
+                            {isLoading ? "Saving..." : "Save"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="pt-4 border-t">
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Riot Games Account</h3>
+                      
+                      {profile?.riot_id ? (
+                        <div>
+                          <Alert className="bg-green-50 border-green-200">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                                <Trophy className="h-5 w-5 text-green-600" />
+                              </div>
+                              <AlertDescription>
+                                Your Riot Games account is connected: <strong>{profile.riot_id}</strong>
+                              </AlertDescription>
+                            </div>
+                          </Alert>
+                          
+                          <div className="mt-3">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex items-center gap-2"
+                              onClick={() => refetch()}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              Refresh Riot Account Data
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Link your Riot Games account to access additional features and display your in-game statistics.
+                          </p>
+                          
+                          <div className="flex gap-2">
+                            <Input 
+                              value={riotId} 
+                              onChange={(e) => setRiotId(e.target.value)}
+                              placeholder="Enter your Riot ID (e.g., Username#TAG)"
+                            />
+                            <Button 
+                              onClick={connectRiotAccount} 
+                              disabled={isConnectingRiot || !riotId}
+                            >
+                              {isConnectingRiot ? "Connecting..." : "Connect"}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Your Riot ID format should be Username#TAG
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="pt-4">
                       <label className="text-sm font-medium block mb-1 text-red-500">Danger Zone</label>
                       <Button variant="destructive" onClick={handleSignOut}>
                         Sign Out
