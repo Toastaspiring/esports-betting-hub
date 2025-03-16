@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +11,8 @@ import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { OverviewTab } from '@/components/profile/OverviewTab';
 import { HistoryTab } from '@/components/profile/HistoryTab';
 import { SettingsTab } from '@/components/profile/SettingsTab';
+import { parseRiotData } from '@/services/profileService';
+import { RiotApiResponse } from '@/types/riotTypes';
 
 interface RiotSummoner {
   profileIconId?: number;
@@ -126,8 +127,8 @@ const Profile = () => {
     }
   };
   
-  const riotData = profile?.riot_data as RiotData | undefined;
-  const hasSummoner = hasValidSummoner(riotData);
+  const parsedRiotData = parseRiotData(profile?.riot_data);
+  const hasSummoner = !!parsedRiotData?.summoner;
   
   if (profileLoading) {
     return (
@@ -153,7 +154,7 @@ const Profile = () => {
               user={user}
               profile={profile}
               hasSummoner={hasSummoner}
-              riotData={riotData}
+              riotData={parsedRiotData}
               onSignOut={handleSignOut}
               onRefetch={refetch}
             />
@@ -183,7 +184,7 @@ const Profile = () => {
                   profile={profile}
                   riotId={riotId}
                   setRiotId={setRiotId}
-                  riotData={riotData}
+                  riotData={parsedRiotData}
                   hasSummoner={hasSummoner}
                   onRefetch={refetch}
                   onSaveProfile={handleSaveProfile}

@@ -1,8 +1,9 @@
 
 import { RiotApiResponse } from '@/types/riotTypes';
+import { Json } from '@/integrations/supabase/types';
 
 // Helper to safely parse riot_data from the database
-export const parseRiotData = (riotData: any): RiotApiResponse | null => {
+export const parseRiotData = (riotData: Json | null): RiotApiResponse | null => {
   if (!riotData) return null;
   
   try {
@@ -12,8 +13,11 @@ export const parseRiotData = (riotData: any): RiotApiResponse | null => {
     }
     
     // If it's already an object with the expected structure
-    if (riotData.summoner && riotData.account) {
-      return riotData as RiotApiResponse;
+    if (typeof riotData === 'object' && riotData !== null) {
+      // Check if it has the summoner property
+      if ('summoner' in riotData) {
+        return riotData as unknown as RiotApiResponse;
+      }
     }
     
     return null;

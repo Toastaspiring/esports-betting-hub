@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -6,7 +5,6 @@ import { Trophy, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { linkRiotAccount, refreshRiotAccountData } from '@/services/riotService';
-import { RiotApiResponse } from '@/types/riotTypes';
 import { parseRiotData } from '@/services/profileService';
 
 interface RiotAccountProps {

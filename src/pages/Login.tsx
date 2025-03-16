@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
 import { RiotApiResponse } from '@/types/riotTypes';
+import { Json } from '@/integrations/supabase/types';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -99,7 +100,7 @@ const Login = () => {
         // Update user profile with the sample Riot data
         await supabase.from('profiles').update({
           riot_id: sampleData.summoner.riotId,
-          riot_data: sampleData
+          riot_data: sampleData as unknown as Json
         }).eq('id', sessionData.user.id);
         
         toast({

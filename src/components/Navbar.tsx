@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, Trophy, Wallet, LogOut } from 'lucide-react';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
+import { parseRiotData } from '@/services/profileService';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,13 +34,13 @@ const Navbar = () => {
   });
   
   // Extract data for display
-  const riotData = profile?.riot_data || {};
-  const hasRiotData = riotData && riotData.summoner && riotData.summoner.profileIconId;
+  const parsedRiotData = parseRiotData(profile?.riot_data);
+  const hasRiotData = parsedRiotData && parsedRiotData.summoner && parsedRiotData.summoner.profileIconId;
   const profileIconUrl = hasRiotData
-    ? `https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${riotData.summoner.profileIconId}.png`
-    : riotData.profilePictureUrl || MOCK_USER.avatar;
+    ? `https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${parsedRiotData.summoner.profileIconId}.png`
+    : parsedRiotData?.profilePictureUrl || MOCK_USER.avatar;
   
-  const displayName = profile?.username || (riotData.account ? `${riotData.account.gameName}#${riotData.account.tagLine}` : user?.email);
+  const displayName = profile?.username || (parsedRiotData?.account ? `${parsedRiotData.account.gameName}#${parsedRiotData.account.tagLine}` : user?.email);
   
   const handleLogout = async () => {
     try {
