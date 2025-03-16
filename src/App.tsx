@@ -12,7 +12,7 @@ import HowItWorks from "@/pages/HowItWorks";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
-import MyBets from "@/pages/MyBets";
+import MyBets from "./pages/MyBets";
 
 const queryClient = new QueryClient();
 
