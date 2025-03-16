@@ -43,31 +43,21 @@ export const useSampleLogin = () => {
         password: testPassword,
       });
       
-      // If login fails, create the test account
-      if (signInError) {
+      // If login fails because the account doesn't exist
+      if (signInError && signInError.message.includes("Invalid login credentials")) {
         console.log("Couldn't sign in, creating test account...");
         
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: testEmail,
-          password: testPassword,
-          options: {
-            data: {
-              is_test_user: true
-            }
-          }
-        });
+        // Try a different approach - use anonymous auth if available
+        // or use a pre-created account instead of trying to create a new one
         
-        if (signUpError) {
-          throw new Error(`Failed to create test account: ${signUpError.message}`);
-        }
-        
-        userData = signUpData;
-        
-        // Wait a moment for the database to update
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // For now, let's inform the user about the rate limit issue
+        throw new Error("Unable to login with sample data: The test account cannot be created due to email rate limits. Please try again later or use a real Riot account.");
+      } else if (signInError) {
+        // Some other error occurred during sign in
+        throw signInError;
       }
       
-      if (!userData.user) {
+      if (!userData?.user) {
         throw new Error("Failed to get user data");
       }
       
