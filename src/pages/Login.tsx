@@ -81,10 +81,11 @@ const Login = () => {
         profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
       };
       
-      // Create anonymous user for testing - this was failing
+      // Create test user with valid email format
+      const randomId = Math.floor(Math.random() * 1000000);
       const { data: signInData, error: signInError } = await supabase.auth.signUp({
-        email: `test-${Date.now()}@example.com`,
-        password: `Password123!${Date.now()}`,
+        email: `testuser${randomId}@example.com`,
+        password: `Password123!${randomId}`,
       });
       
       if (signInError) {
