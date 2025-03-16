@@ -81,26 +81,73 @@ const Login = () => {
         profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
       };
       
-      // Create test user with valid email format
-      const randomId = Math.floor(Math.random() * 1000000);
-      const { data: signInData, error: signInError } = await supabase.auth.signUp({
-        email: `testuser${randomId}@example.com`,
-        password: `Password123!${randomId}`,
+      // Instead of creating a new user with SignUp (which hits rate limits), 
+      // create a test session directly using the admin sign-in method
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: "test@example.com",
+        password: "Test123456!",
       });
       
       if (signInError) {
-        throw signInError;
-      }
-      
-      if (signInData.user) {
-        // Convert RiotApiResponse to JSON string and then parse to avoid type issues
+        // If sign-in fails (e.g., user doesn't exist), create the user first
+        if (signInError.message.includes("Invalid login credentials")) {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: "test@example.com",
+            password: "Test123456!",
+            options: {
+              data: {
+                is_test_user: true
+              }
+            }
+          });
+          
+          if (signUpError) {
+            throw signUpError;
+          }
+          
+          // Use the newly created user
+          if (signUpData.user) {
+            // Convert RiotApiResponse to JSON to avoid typing issues
+            const riotDataJson = JSON.stringify(sampleData);
+            
+            // Update profile with sample data
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                riot_id: sampleData.summoner.riotId,
+                riot_data: JSON.parse(riotDataJson),
+                username: "TestUser",
+                balance: 10000
+              })
+              .eq('id', signUpData.user.id);
+            
+            if (updateError) {
+              throw updateError;
+            }
+            
+            toast({
+              title: "Sample Login Successful",
+              description: "You're logged in with sample data",
+            });
+            
+            navigate('/', { replace: true });
+          }
+        } else {
+          throw signInError;
+        }
+      } else if (signInData.user) {
+        // User already exists, just update the profile with sample data
         const riotDataJson = JSON.stringify(sampleData);
         
-        // Update user profile with the sample Riot data
-        const { error: updateError } = await supabase.from('profiles').update({
-          riot_id: sampleData.summoner.riotId,
-          riot_data: JSON.parse(riotDataJson) 
-        }).eq('id', signInData.user.id);
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            riot_id: sampleData.summoner.riotId,
+            riot_data: JSON.parse(riotDataJson),
+            username: "TestUser",
+            balance: 10000
+          })
+          .eq('id', signInData.user.id);
         
         if (updateError) {
           throw updateError;
