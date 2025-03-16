@@ -12,7 +12,8 @@ import HowItWorks from "@/pages/HowItWorks";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
-import MyBets from "@/pages/MyBets";
+// Fix the import by directly referencing the file path without alias
+import MyBets from "./pages/MyBets";
 
 const queryClient = new QueryClient();
 
