@@ -1,155 +1,56 @@
+
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { signIn, signUp } from '@/services/supabaseService';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle } from 'lucide-react';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
-
-const registerSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string()
-    .min(6, { message: "Password must be at least 6 characters" })
-    .max(100, { message: "Password cannot exceed 100 characters" }),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [formSuccess, setFormSuccess] = useState('');
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState(() => {
-    return location.pathname.includes('register') ? 'register' : 'login';
-  });
   const { user } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  useEffect(() => {
-    const path = activeTab === 'register' ? '/register' : '/login';
-    if (location.pathname !== path) {
-      navigate(path, { replace: true });
-    }
-  }, [activeTab, navigate, location.pathname]);
-  
-  useEffect(() => {
-    if (location.pathname.includes('register')) {
-      setActiveTab('register');
-    } else {
-      setActiveTab('login');
-    }
-  }, [location.pathname]);
-  
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-  
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
-  
+  // Redirect if already logged in
   if (user) {
     return <Navigate to="/" replace />;
   }
   
-  const handleSignIn = async (values: LoginFormValues) => {
+  const handleRiotLogin = async () => {
     setIsLoading(true);
-    setFormSuccess('');
     
     try {
-      const { error } = await signIn(values.email, values.password);
+      // Get the current URL for the redirect
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
+      // Call the Supabase edge function to get the Riot OAuth URL
+      const { data, error } = await supabase.functions.invoke('riot-auth', {
+        query: { 
+          action: 'login',
+          redirectUrl 
+        }
+      });
       
       if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-        navigate('/', { replace: true });
+        throw error;
       }
+      
+      // Store the state in localStorage to verify when the user returns
+      localStorage.setItem('riotAuthState', data.state);
+      
+      // Redirect to Riot's authentication page
+      window.location.href = data.url;
     } catch (error) {
       console.error('Login error:', error);
       toast({
         title: "Login failed",
-        description: "An unexpected error occurred",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleSignUp = async (values: RegisterFormValues) => {
-    setIsLoading(true);
-    setFormSuccess('');
-    
-    try {
-      const { error } = await signUp(values.email, values.password);
-      
-      if (error) {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        setFormSuccess('Registration successful! You can now log in.');
-        toast({
-          title: "Registration successful",
-          description: "Welcome to LoL Bet! You can now log in.",
-        });
-        registerForm.reset();
-        setActiveTab('login');
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      toast({
-        title: "Registration failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -172,151 +73,45 @@ const Login = () => {
             <p className="text-muted-foreground">Sign in to place bets and track your winnings</p>
           </div>
           
-          <Tabs 
-            value={activeTab} 
-            onValueChange={setActiveTab} 
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle>Login</CardTitle>
-                  <CardDescription>
-                    Enter your email and password to access your account
-                  </CardDescription>
-                </CardHeader>
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(handleSignIn)}>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={loginForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="you@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="••••••" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-2">
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Please wait
-                          </>
-                        ) : "Sign In"}
-                      </Button>
-                    </CardFooter>
-                  </form>
-                </Form>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="register">
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle>Create an account</CardTitle>
-                  <CardDescription>
-                    Enter your details to create your account
-                  </CardDescription>
-                </CardHeader>
-                
-                {formSuccess && (
-                  <Alert className="mb-4 mx-6 bg-green-50 text-green-700 border-green-100">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <AlertDescription>{formSuccess}</AlertDescription>
-                  </Alert>
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Login with Riot Games</CardTitle>
+              <CardDescription>
+                Use your Riot Games account to sign in
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <Button 
+                onClick={handleRiotLogin}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                size="lg"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting to Riot Games...
+                  </>
+                ) : (
+                  <>
+                    <svg 
+                      className="w-5 h-5 mr-2" 
+                      viewBox="0 0 24 24" 
+                      fill="currentColor"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M12.534 21.77l-2.13-2.13h-2.13l-4.26-4.26V13.25L2.774 12l1.24-1.25v-2.13l4.26-4.26h2.13l2.13-2.13 2.13 2.13h2.13l4.26 4.26v2.13L22.294 12l-1.24 1.25v2.13l-4.26 4.26h-2.13l-2.13 2.13z" />
+                    </svg>
+                    Sign in with Riot
+                  </>
                 )}
-                
-                <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(handleSignUp)}>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="you@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="••••••" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirm Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="••••••" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-2">
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Please wait
-                          </>
-                        ) : "Create Account"}
-                      </Button>
-                    </CardFooter>
-                  </form>
-                </Form>
-              </Card>
-            </TabsContent>
-          </Tabs>
+              </Button>
+              
+              <p className="text-sm text-muted-foreground mt-6 text-center">
+                By continuing, you agree to our Terms of Service and Privacy Policy.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>

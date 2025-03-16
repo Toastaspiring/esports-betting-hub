@@ -12,6 +12,7 @@ import HowItWorks from "@/pages/HowItWorks";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
+import AuthCallback from "@/pages/AuthCallback";
 import MyBets from "@/pages/MyBets";
 import Tournament from "@/pages/Tournament";
 import Contact from "@/pages/Contact";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/my-bets" element={<MyBets />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
