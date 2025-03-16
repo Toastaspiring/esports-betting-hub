@@ -32,7 +32,7 @@ const MyBets = () => {
 
   if (!session) {
     return (
-      <div className="container max-w-6xl py-6 px-4 md:py-10">
+      <div className="container max-w-6xl py-6 px-4 md:py-10 bg-background">
         <Card>
           <CardHeader>
             <CardTitle>My Bets</CardTitle>
@@ -43,8 +43,11 @@ const MyBets = () => {
     );
   }
 
+  // Helper function to check if a bet is settled
+  const isSettled = (bet) => bet.status === 'settled' || bet.status === 'won' || bet.status === 'lost';
+
   return (
-    <div className="container max-w-6xl py-6 px-4 md:py-10">
+    <div className="container max-w-6xl py-6 px-4 md:py-10 bg-background">
       <h1 className="text-3xl font-bold mb-6">My Bets</h1>
       
       <Tabs defaultValue="active">
@@ -64,13 +67,13 @@ const MyBets = () => {
                 <div className="flex justify-center p-4">
                   <p>Loading your bets...</p>
                 </div>
-              ) : bets?.filter(bet => !bet.is_settled).length === 0 ? (
+              ) : bets?.filter(bet => !isSettled(bet)).length === 0 ? (
                 <div className="text-center p-4">
                   <p className="text-muted-foreground">You don't have any active bets</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {bets?.filter(bet => !bet.is_settled).map((bet) => (
+                  {bets?.filter(bet => !isSettled(bet)).map((bet) => (
                     <BetItem key={bet.id} bet={bet} />
                   ))}
                 </div>
@@ -90,13 +93,13 @@ const MyBets = () => {
                 <div className="flex justify-center p-4">
                   <p>Loading your bets...</p>
                 </div>
-              ) : bets?.filter(bet => bet.is_settled).length === 0 ? (
+              ) : bets?.filter(bet => isSettled(bet)).length === 0 ? (
                 <div className="text-center p-4">
                   <p className="text-muted-foreground">You don't have any settled bets yet</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {bets?.filter(bet => bet.is_settled).map((bet) => (
+                  {bets?.filter(bet => isSettled(bet)).map((bet) => (
                     <BetItem key={bet.id} bet={bet} />
                   ))}
                 </div>
@@ -112,8 +115,14 @@ const MyBets = () => {
 const BetItem = ({ bet }: { bet: any }) => {
   const match = bet.matches;
   
+  // Helper function to check if a bet is settled
+  const isSettled = (bet) => bet.status === 'settled' || bet.status === 'won' || bet.status === 'lost';
+  
+  // Helper function to check if a bet is won
+  const isWon = (bet) => bet.status === 'won';
+  
   return (
-    <Card>
+    <Card className="bg-card">
       <CardContent className="p-4">
         <div className="flex flex-col md:flex-row justify-between">
           <div>
@@ -124,24 +133,24 @@ const BetItem = ({ bet }: { bet: any }) => {
           </div>
           
           <div className="mt-2 md:mt-0">
-            <p className="font-medium">Bet: {bet.bet_type}</p>
+            <p className="font-medium">Bet: {bet.bet_type || 'Team Win'}</p>
             <p className="text-sm text-muted-foreground">Amount: ${bet.amount}</p>
           </div>
           
           <div className="mt-2 md:mt-0 text-right">
             <p className="font-medium">
-              {bet.is_settled ? (
-                bet.won ? (
-                  <span className="text-green-500">Won ${bet.potential_win}</span>
+              {isSettled(bet) ? (
+                isWon(bet) ? (
+                  <span className="text-green-500">Won ${bet.potential_win || Math.round(bet.amount * bet.odds)}</span>
                 ) : (
                   <span className="text-red-500">Lost ${bet.amount}</span>
                 )
               ) : (
-                <span className="text-blue-500">Potential win: ${bet.potential_win}</span>
+                <span className="text-blue-500">Potential win: ${bet.potential_win || Math.round(bet.amount * bet.odds)}</span>
               )}
             </p>
             <p className="text-sm text-muted-foreground">
-              {bet.is_settled ? 'Settled' : 'Pending'}
+              {isSettled(bet) ? 'Settled' : 'Pending'}
             </p>
           </div>
         </div>
