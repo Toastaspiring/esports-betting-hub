@@ -15,7 +15,7 @@ const UserStats = () => {
   }, []);
   
   return (
-    <section className="py-16 bg-slate-50">
+    <section className="py-16 bg-background/50">
       <div className="container px-4 mx-auto">
         {/* Section Header */}
         <div 
@@ -45,11 +45,11 @@ const UserStats = () => {
                   <p className="text-sm text-muted-foreground mb-1">Balance</p>
                   <h3 className="text-2xl font-semibold">{MOCK_USER.balance.toLocaleString()} LP</h3>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-blue-500" />
+                <div className="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-blue-400" />
                 </div>
               </div>
-              <div className="flex items-center text-xs text-green-600">
+              <div className="flex items-center text-xs text-green-400">
                 <TrendingUp className="w-3.5 h-3.5 mr-1" />
                 <span>+1,200 LP this week</span>
               </div>
@@ -68,11 +68,11 @@ const UserStats = () => {
                   <p className="text-sm text-muted-foreground mb-1">Win Rate</p>
                   <h3 className="text-2xl font-semibold">{(MOCK_USER.winRate * 100).toFixed(1)}%</h3>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                  <BarChart2 className="w-5 h-5 text-green-500" />
+                <div className="w-10 h-10 rounded-full bg-green-900/30 flex items-center justify-center">
+                  <BarChart2 className="w-5 h-5 text-green-400" />
                 </div>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2">
+              <div className="w-full bg-secondary rounded-full h-1.5 mb-2">
                 <div 
                   className="bg-green-500 h-1.5 rounded-full"
                   style={{ width: `${MOCK_USER.winRate * 100}%` }}
@@ -98,11 +98,11 @@ const UserStats = () => {
                   <p className="text-sm text-muted-foreground mb-1">Bets Won</p>
                   <h3 className="text-2xl font-semibold">{MOCK_USER.betsWon}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
-                  <Trophy className="w-5 h-5 text-amber-500" />
+                <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-amber-400" />
                 </div>
               </div>
-              <div className="flex items-center text-xs text-green-600">
+              <div className="flex items-center text-xs text-green-400">
                 <TrendingUp className="w-3.5 h-3.5 mr-1" />
                 <span>+8 this month</span>
               </div>
@@ -121,8 +121,8 @@ const UserStats = () => {
                   <p className="text-sm text-muted-foreground mb-1">Bets Lost</p>
                   <h3 className="text-2xl font-semibold">{MOCK_USER.betsLost}</h3>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-red-500 transform rotate-180" />
+                <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-red-400 transform rotate-180" />
                 </div>
               </div>
               <div className="flex items-center text-xs text-muted-foreground">
