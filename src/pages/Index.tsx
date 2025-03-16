@@ -6,7 +6,7 @@ import FeaturedMatches from '@/components/FeaturedMatches';
 import UserStats from '@/components/UserStats';
 import { MOCK_MATCHES } from '@/lib/constants';
 import BettingInterface from '@/components/BettingInterface';
-import { ArrowRight, Calendar, ChevronRight, Trophy } from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, Trophy, Wallet } from 'lucide-react';
 
 const Index = () => {
   const [showBettingInterface, setShowBettingInterface] = useState(false);

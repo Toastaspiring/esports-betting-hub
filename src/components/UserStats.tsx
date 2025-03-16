@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { MOCK_USER } from '@/lib/constants';
-import { TrendingUp, Trophy, Wallet, BarChart2 } from 'lucide-react';
+import { TrendingUp, Trophy, Wallet, BarChart2, ChevronRight } from 'lucide-react';
 
 const UserStats = () => {
   const [isVisible, setIsVisible] = useState(false);
