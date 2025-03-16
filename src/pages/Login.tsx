@@ -81,27 +81,27 @@ const Login = () => {
         profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
       };
       
-      // Create anonymous user for testing
-      const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
-        provider: 'discord',  // Using Discord as a temporary provider for sample login
-        options: {
-          skipBrowserRedirect: true  // Don't redirect to Discord
-        }
+      // Create anonymous user for testing - this was failing
+      const { data: signInData, error: signInError } = await supabase.auth.signUp({
+        email: `test-${Date.now()}@example.com`,
+        password: `Password123!${Date.now()}`,
       });
       
-      if (authError) {
-        throw authError;
+      if (signInError) {
+        throw signInError;
       }
       
-      // Get URL from the auth data
-      const { data: sessionData } = await supabase.auth.signInAnonymously();
-      
-      if (sessionData) {
+      if (signInData.user) {
         // Update user profile with the sample Riot data
-        await supabase.from('profiles').update({
+        const { error: updateError } = await supabase.from('profiles').update({
           riot_id: sampleData.summoner.riotId,
-          riot_data: sampleData as unknown as Json
-        }).eq('id', sessionData.user.id);
+          // Convert RiotApiResponse to Json using JSON.stringify then parse
+          riot_data: JSON.parse(JSON.stringify(sampleData)) as Json
+        }).eq('id', signInData.user.id);
+        
+        if (updateError) {
+          throw updateError;
+        }
         
         toast({
           title: "Sample Login Successful",
