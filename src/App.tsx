@@ -5,14 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SupabaseProvider } from "@/hooks/useSupabase";
-import Index from "./pages/Index";
-import Matches from "./pages/Matches";
-import Leaderboard from "./pages/Leaderboard";
-import HowItWorks from "./pages/HowItWorks";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import MyBets from "./pages/MyBets";
+import Index from "@/pages/Index";
+import Matches from "@/pages/Matches";
+import Leaderboard from "@/pages/Leaderboard";
+import HowItWorks from "@/pages/HowItWorks";
+import Profile from "@/pages/Profile";
+import NotFound from "@/pages/NotFound";
+import Login from "@/pages/Login";
+import MyBets from "@/pages/MyBets";
 
 const queryClient = new QueryClient();
 
