@@ -15,17 +15,18 @@ export const useSampleLogin = () => {
     setIsLoading(true);
     
     try {
-      // Email and password for test account - using the pre-created test account
+      // Email and password for our pre-created test account
       const testEmail = "test@example.com";
       const testPassword = "Test123456!";
 
-      // Sign in with the pre-created test account (no need to create one)
+      console.log("Attempting to sign in with test account...");
+      
+      // Sign in with the pre-created test account
       const { data: userData, error: signInError } = await supabase.auth.signInWithPassword({
         email: testEmail,
         password: testPassword,
       });
       
-      // If login fails - handle the error
       if (signInError) {
         console.error("Sample login sign-in error:", signInError);
         throw new Error(`Unable to login with sample data: ${signInError.message}`);
@@ -35,7 +36,7 @@ export const useSampleLogin = () => {
         throw new Error("Failed to get user data");
       }
       
-      console.log("Successfully logged in with test account, refreshing auth...");
+      console.log("Successfully logged in with test account:", userData.user.id);
       
       // Manually refresh the auth context to make sure app recognizes the user is logged in
       await refreshAuth();
