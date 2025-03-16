@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +14,13 @@ const MOCK_BET_HISTORY = [
   {
     id: 1,
     match: {
-      id: MOCK_MATCHES[0].id,
-      teamA: MOCK_MATCHES[0].teamA,
-      teamB: MOCK_MATCHES[0].teamB,
-      tournament: MOCK_MATCHES[0].tournament,
+      id: MOCK_MATCHES[0]?.id,
+      teamA: MOCK_MATCHES[0]?.teamA,
+      teamB: MOCK_MATCHES[0]?.teamB,
+      league: MOCK_MATCHES[0]?.league,
       date: new Date(2023, 8, 5, 15, 30)
     },
-    betOn: MOCK_MATCHES[0].teamA.name,
+    betOn: MOCK_MATCHES[0]?.teamA?.name,
     amount: 1500,
     odds: 2.1,
     result: "win",
@@ -31,13 +30,13 @@ const MOCK_BET_HISTORY = [
   {
     id: 2,
     match: {
-      id: MOCK_MATCHES[1].id,
-      teamA: MOCK_MATCHES[1].teamA,
-      teamB: MOCK_MATCHES[1].teamB,
-      tournament: MOCK_MATCHES[1].tournament,
+      id: MOCK_MATCHES[1]?.id,
+      teamA: MOCK_MATCHES[1]?.teamA,
+      teamB: MOCK_MATCHES[1]?.teamB,
+      league: MOCK_MATCHES[1]?.league,
       date: new Date(2023, 8, 2, 18, 0)
     },
-    betOn: MOCK_MATCHES[1].teamB.name,
+    betOn: MOCK_MATCHES[1]?.teamB?.name,
     amount: 800,
     odds: 1.75,
     result: "loss",
@@ -47,13 +46,13 @@ const MOCK_BET_HISTORY = [
   {
     id: 3,
     match: {
-      id: MOCK_MATCHES[2].id,
-      teamA: MOCK_MATCHES[2].teamA,
-      teamB: MOCK_MATCHES[2].teamB,
-      tournament: MOCK_MATCHES[2].tournament,
+      id: MOCK_MATCHES[2]?.id,
+      teamA: MOCK_MATCHES[2]?.teamA,
+      teamB: MOCK_MATCHES[2]?.teamB,
+      league: MOCK_MATCHES[2]?.league,
       date: new Date(2023, 8, 10, 20, 0)
     },
-    betOn: MOCK_MATCHES[2].teamA.name,
+    betOn: MOCK_MATCHES[2]?.teamA?.name,
     amount: 2000,
     odds: 1.5,
     result: "pending",
@@ -63,13 +62,13 @@ const MOCK_BET_HISTORY = [
   {
     id: 4,
     match: {
-      id: MOCK_MATCHES[3].id,
-      teamA: MOCK_MATCHES[3].teamA,
-      teamB: MOCK_MATCHES[3].teamB,
-      tournament: MOCK_MATCHES[3].tournament,
+      id: MOCK_MATCHES[3]?.id,
+      teamA: MOCK_MATCHES[3]?.teamA,
+      teamB: MOCK_MATCHES[3]?.teamB,
+      league: MOCK_MATCHES[3]?.league,
       date: new Date(2023, 7, 28, 16, 0)
     },
-    betOn: MOCK_MATCHES[3].teamB.name,
+    betOn: MOCK_MATCHES[3]?.teamB?.name,
     amount: 1200,
     odds: 1.9,
     result: "win",
@@ -79,13 +78,13 @@ const MOCK_BET_HISTORY = [
   {
     id: 5,
     match: {
-      id: MOCK_MATCHES[4].id,
-      teamA: MOCK_MATCHES[4].teamA,
-      teamB: MOCK_MATCHES[4].teamB,
-      tournament: MOCK_MATCHES[4].tournament,
+      id: MOCK_MATCHES[0]?.id,
+      teamA: MOCK_MATCHES[0]?.teamA,
+      teamB: MOCK_MATCHES[0]?.teamB,
+      league: MOCK_MATCHES[0]?.league,
       date: new Date(2023, 7, 25, 14, 30)
     },
-    betOn: MOCK_MATCHES[4].teamA.name,
+    betOn: MOCK_MATCHES[0]?.teamA?.name,
     amount: 1000,
     odds: 2.5,
     result: "loss",
@@ -366,7 +365,7 @@ const Profile = () => {
                                     {bet.match.teamA.name} vs {bet.match.teamB.name}
                                   </div>
                                   <div className="text-xs text-muted-foreground flex items-center">
-                                    <span className="mr-2">{bet.match.tournament}</span>
+                                    <span className="mr-2">{bet.match.league.name}</span>
                                     <span>• Bet on {bet.betOn}</span>
                                   </div>
                                 </div>
@@ -406,6 +405,7 @@ const Profile = () => {
                     </div>
                   </TabsContent>
                   
+                  
                   <TabsContent value="wins">
                     <div className="space-y-4">
                       {MOCK_BET_HISTORY.filter(bet => bet.result === 'win').map((bet) => (
@@ -428,7 +428,7 @@ const Profile = () => {
                                 {bet.match.teamA.name} vs {bet.match.teamB.name}
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center">
-                                <span className="mr-2">{bet.match.tournament}</span>
+                                <span className="mr-2">{bet.match.league.name}</span>
                                 <span>• Bet on {bet.betOn}</span>
                               </div>
                             </div>
@@ -485,7 +485,7 @@ const Profile = () => {
                                 {bet.match.teamA.name} vs {bet.match.teamB.name}
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center">
-                                <span className="mr-2">{bet.match.tournament}</span>
+                                <span className="mr-2">{bet.match.league.name}</span>
                                 <span>• Bet on {bet.betOn}</span>
                               </div>
                             </div>
@@ -542,7 +542,7 @@ const Profile = () => {
                                 {bet.match.teamA.name} vs {bet.match.teamB.name}
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center">
-                                <span className="mr-2">{bet.match.tournament}</span>
+                                <span className="mr-2">{bet.match.league.name}</span>
                                 <span>• Bet on {bet.betOn}</span>
                               </div>
                             </div>

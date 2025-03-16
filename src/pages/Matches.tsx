@@ -24,7 +24,7 @@ const Matches = () => {
   const filteredMatches = MOCK_MATCHES.filter(match => 
     match.teamA.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     match.teamB.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    match.tournament.toLowerCase().includes(searchQuery.toLowerCase())
+    match.league.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   const upcomingMatches = filteredMatches.filter(match => match.status === 'upcoming');
