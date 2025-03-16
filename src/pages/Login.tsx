@@ -59,6 +59,14 @@ const Login = () => {
     }
   }, [activeTab, navigate, location.pathname]);
   
+  useEffect(() => {
+    if (location.pathname.includes('register')) {
+      setActiveTab('register');
+    } else {
+      setActiveTab('login');
+    }
+  }, [location.pathname]);
+  
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
