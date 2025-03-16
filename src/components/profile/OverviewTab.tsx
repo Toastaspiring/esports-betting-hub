@@ -41,9 +41,9 @@ export const OverviewTab = ({ bets, profile }: OverviewTabProps) => {
   const pendingBets = effectiveBets.filter(bet => bet.status === 'pending') || [];
   const lostBets = effectiveBets.filter(bet => bet.status === 'lost') || [];
   
-  const winRate = profile?.bets_won && (profile.bets_won + profile.bets_lost) > 0
-    ? profile.bets_won / (profile.bets_won + profile.bets_lost)
-    : 0;
+  // Calculate win rate properly based on won and lost bets (excluding pending)
+  const totalCompletedBets = wonBets.length + lostBets.length;
+  const winRate = totalCompletedBets > 0 ? wonBets.length / totalCompletedBets : 0;
 
   return (
     <>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useQuery } from '@tanstack/react-query';
@@ -41,10 +40,9 @@ const UserStats = () => {
     enabled: !!user,
   });
   
-  // Calculate win rate
-  const winRate = profile?.bets_won && (profile.bets_won + profile.bets_lost) > 0
-    ? profile.bets_won / (profile.bets_won + profile.bets_lost)
-    : 0;
+  // Calculate win rate properly
+  const totalCompletedBets = (profile?.bets_won || 0) + (profile?.bets_lost || 0);
+  const winRate = totalCompletedBets > 0 ? (profile?.bets_won || 0) / totalCompletedBets : 0;
   
   return (
     <section className="py-16 bg-background/50">

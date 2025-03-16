@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
@@ -34,14 +33,18 @@ const Leaderboard = () => {
   useEffect(() => {
     if (data) {
       // Transform the data to include rank
-      const rankedUsers = data.map((user, index) => ({
-        ...user,
-        rank: index + 1,
-        badge: getBadgeForRank(index + 1),
-        winRate: user.bets_won && (user.bets_won + user.bets_lost) > 0
-          ? user.bets_won / (user.bets_won + user.bets_lost)
-          : 0
-      }));
+      const rankedUsers = data.map((user, index) => {
+        // Calculate win rate properly using completed bets
+        const totalCompletedBets = (user.bets_won || 0) + (user.bets_lost || 0);
+        const winRate = totalCompletedBets > 0 ? (user.bets_won || 0) / totalCompletedBets : 0;
+        
+        return {
+          ...user,
+          rank: index + 1,
+          badge: getBadgeForRank(index + 1),
+          winRate: winRate
+        };
+      });
       setUsers(rankedUsers);
       setIsLoading(false);
     }
@@ -60,23 +63,31 @@ const Leaderboard = () => {
   useEffect(() => {
     if (data) {
       if (searchQuery.trim() === '') {
-        setUsers(data.map((user, index) => ({
-          ...user,
-          rank: index + 1,
-          badge: getBadgeForRank(index + 1),
-          winRate: user.bets_won && (user.bets_won + user.bets_lost) > 0
-            ? user.bets_won / (user.bets_won + user.bets_lost)
-            : 0
-        })));
-      } else {
-        const allUsers = data.map((user, index) => ({
-          ...user,
-          rank: index + 1,
-          badge: getBadgeForRank(index + 1),
-          winRate: user.bets_won && (user.bets_won + user.bets_lost) > 0
-            ? user.bets_won / (user.bets_won + user.bets_lost)
-            : 0
+        setUsers(data.map((user, index) => {
+          // Calculate win rate properly using completed bets
+          const totalCompletedBets = (user.bets_won || 0) + (user.bets_lost || 0);
+          const winRate = totalCompletedBets > 0 ? (user.bets_won || 0) / totalCompletedBets : 0;
+          
+          return {
+            ...user,
+            rank: index + 1,
+            badge: getBadgeForRank(index + 1),
+            winRate: winRate
+          };
         }));
+      } else {
+        const allUsers = data.map((user, index) => {
+          // Calculate win rate properly using completed bets
+          const totalCompletedBets = (user.bets_won || 0) + (user.bets_lost || 0);
+          const winRate = totalCompletedBets > 0 ? (user.bets_won || 0) / totalCompletedBets : 0;
+          
+          return {
+            ...user,
+            rank: index + 1,
+            badge: getBadgeForRank(index + 1),
+            winRate: winRate
+          };
+        });
         
         const filtered = allUsers.filter(user => 
           user.username?.toLowerCase().includes(searchQuery.toLowerCase())

@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -73,9 +72,9 @@ export const ProfileSidebar = ({
     }
   };
 
-  const winRate = profile?.bets_won && (profile.bets_won + profile.bets_lost) > 0
-    ? profile.bets_won / (profile.bets_won + profile.bets_lost)
-    : 0;
+  // Calculate win rate properly based on completed bets
+  const totalCompletedBets = (profile?.bets_won || 0) + (profile?.bets_lost || 0);
+  const winRate = totalCompletedBets > 0 ? (profile?.bets_won || 0) / totalCompletedBets : 0;
 
   // Determine the profile picture URL
   let profileIconUrl = "";
@@ -126,7 +125,7 @@ export const ProfileSidebar = ({
             <AvatarImage src={profile?.avatar_url || ""} />
           )}
           <AvatarFallback className="bg-primary/10 text-primary text-lg">
-            {displayName ? displayName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
+            {profile?.username ? profile.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
           </AvatarFallback>
         </Avatar>
         
@@ -160,7 +159,7 @@ export const ProfileSidebar = ({
           </div>
         ) : (
           <>
-            <h2 className="text-xl font-semibold">{displayName}</h2>
+            <h2 className="text-xl font-semibold">{profile?.username || "Anonymous User"}</h2>
             <p className="text-muted-foreground text-sm mt-1">{user?.email}</p>
             
             {isMockSession && (
