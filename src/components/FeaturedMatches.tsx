@@ -55,18 +55,17 @@ const FeaturedMatches = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            {user && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSeedDatabase}
-                className={`transition-all duration-700 ${
-                  isVisible ? 'opacity-100 transform-none' : 'opacity-0 translate-x-4'
-                }`}
-              >
-                Seed Database
-              </Button>
-            )}
+            {/* Removed user conditional check so the button is always visible */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSeedDatabase}
+              className={`transition-all duration-700 ${
+                isVisible ? 'opacity-100 transform-none' : 'opacity-0 translate-x-4'
+              }`}
+            >
+              Seed Database
+            </Button>
             
             <a 
               href="/matches" 
