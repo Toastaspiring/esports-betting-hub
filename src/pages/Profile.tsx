@@ -135,12 +135,12 @@ const Profile = () => {
       if (isMockSession) {
         // For mock sessions, just clear the mock session
         setMockSession(null);
-        navigate('/');
+        navigate('/'); // Navigate to landing page
         return;
       }
       
       await signOut();
-      navigate('/');
+      // No need to navigate here as signOut will handle the redirection
     } catch (error) {
       console.error('Error signing out:', error);
       toast({

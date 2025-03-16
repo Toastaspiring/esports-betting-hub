@@ -28,7 +28,7 @@ export const signOut = async () => {
   if (localStorageSession) {
     // Clear mock session from localStorage
     localStorage.removeItem('mockSession');
-    // Force a refresh to ensure clean state
+    // Force a refresh to ensure clean state and redirect to landing page
     window.location.href = '/';
     return { success: true };
   }
@@ -39,7 +39,7 @@ export const signOut = async () => {
   // If there was an error during sign out, throw it
   if (error) throw error;
   
-  // Force a refresh of the page to clear any remaining state
+  // Force a refresh of the page to clear any remaining state and redirect to landing page
   window.location.href = '/';
   
   return { success: true };
