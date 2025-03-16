@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, Trophy, Wallet, LogOut } from 'lucide-react';
@@ -16,7 +17,7 @@ const Navbar = () => {
   const { toast } = useToast();
   
   // Fetch profile data for the currently logged-in user
-  const { data: profile } = useQuery({
+  const { data: profile, refetch } = useQuery({
     queryKey: ['navbarProfile', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -44,12 +45,20 @@ const Navbar = () => {
   
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error during logout:', error);
+        throw error;
+      }
+      
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      navigate('/');
+      
+      // Force a refresh of the page to ensure all auth state is cleared
+      window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
       toast({

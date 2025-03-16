@@ -33,10 +33,22 @@ export const SupabaseProvider = ({ children }: { children: React.ReactNode }) =>
 
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
+        console.log('Auth state changed:', event);
+        
         setSession(currentSession);
         setUser(currentSession?.user || null);
         setIsLoading(false);
+        
+        // For debugging purposes - log the current user state
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out, user state is:', currentSession?.user || null);
+          
+          // Force refresh supabase state to ensure it's clean
+          const { data } = await supabase.auth.getSession();
+          setSession(data.session);
+          setUser(data.session?.user || null);
+        }
       }
     );
 

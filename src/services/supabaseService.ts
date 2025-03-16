@@ -22,7 +22,15 @@ export const signUp = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
-  return await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  
+  // If there was an error during sign out, throw it
+  if (error) throw error;
+  
+  // Force a refresh of the authentication state
+  const { data } = await supabase.auth.getSession();
+  
+  return { success: true };
 };
 
 // Profile functions
