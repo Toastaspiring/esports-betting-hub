@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Login from "@/pages/Login";
 import MyBets from "@/pages/MyBets";
+import Tournament from "@/pages/Tournament";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/matches" element={<Matches />} />
+            <Route path="/tournament/:id" element={<Tournament />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/profile" element={<Profile />} />

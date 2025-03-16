@@ -58,6 +58,17 @@ export const fetchLeagues = async () => {
   return { data };
 };
 
+export const fetchLeagueDetails = async (leagueId: string) => {
+  const { data, error } = await supabase
+    .from('leagues')
+    .select('*')
+    .eq('id', leagueId)
+    .single();
+  
+  if (error) throw error;
+  return data;
+};
+
 export const createLeague = async (league: { name: string, logo: string }) => {
   const { data, error } = await supabase
     .from('leagues')
@@ -146,6 +157,51 @@ export const fetchMatches = async (status?: string) => {
   }));
   
   return { data: transformedData || [] };
+};
+
+export const fetchMatchesByLeague = async (leagueId: string) => {
+  const { data, error } = await supabase
+    .from('matches')
+    .select(`
+      *,
+      league:leagues(*),
+      teamA:teams!matches_team_a_id_fkey(*),
+      teamB:teams!matches_team_b_id_fkey(*)
+    `)
+    .eq('league_id', leagueId);
+  
+  if (error) throw error;
+  
+  // Transform data to match the expected format in the frontend
+  const transformedData = data?.map(match => ({
+    id: match.id,
+    teamA: {
+      id: match.teamA.id,
+      name: match.teamA.name,
+      logo: match.teamA.logo,
+      winRate: match.teamA.win_rate
+    },
+    teamB: {
+      id: match.teamB.id,
+      name: match.teamB.name,
+      logo: match.teamB.logo,
+      winRate: match.teamB.win_rate
+    },
+    date: match.match_date,
+    league: {
+      id: match.league.id,
+      name: match.league.name,
+      logo: match.league.logo,
+      region: 'Unknown' // We don't have region in our schema yet
+    },
+    odds: {
+      teamA: match.odds_team_a,
+      teamB: match.odds_team_b
+    },
+    status: match.status
+  }));
+  
+  return transformedData || [];
 };
 
 export const createMatch = async (match: {

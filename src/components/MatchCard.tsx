@@ -5,7 +5,7 @@ import { Calendar, Clock, TrendingUp } from 'lucide-react';
 import BettingInterface from './BettingInterface';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 interface MatchCardProps {
   match: Match;
@@ -62,14 +62,16 @@ const MatchCard = ({ match, featured = false }: MatchCardProps) => {
       >
         {/* League Badge */}
         <div className="absolute top-3 left-3 z-10">
-          <div className="flex items-center bg-secondary rounded-full px-2 py-1 shadow-sm">
-            <img 
-              src={match.league.logo} 
-              alt={match.league.name} 
-              className="w-4 h-4 mr-1.5"
-            />
-            <span className="text-xs font-medium">{match.league.name}</span>
-          </div>
+          <Link to={`/tournament/${match.league.id}`}>
+            <div className="flex items-center bg-secondary rounded-full px-2 py-1 shadow-sm hover:bg-secondary/80 transition-colors">
+              <img 
+                src={match.league.logo} 
+                alt={match.league.name} 
+                className="w-4 h-4 mr-1.5"
+              />
+              <span className="text-xs font-medium">{match.league.name}</span>
+            </div>
+          </Link>
         </div>
         
         {/* Live Badge */}
