@@ -7,12 +7,14 @@ interface SupabaseContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  refreshAuth: () => Promise<void>;
 }
 
 const SupabaseContext = createContext<SupabaseContextType>({
   user: null,
   session: null,
   isLoading: true,
+  refreshAuth: async () => {}
 });
 
 export const SupabaseProvider = ({ children }: { children: React.ReactNode }) => {
@@ -20,10 +22,18 @@ export const SupabaseProvider = ({ children }: { children: React.ReactNode }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshAuth = async () => {
+    console.log('Manually refreshing auth state...');
+    const { data } = await supabase.auth.getSession();
+    setSession(data.session);
+    setUser(data.session?.user || null);
+  };
+
   useEffect(() => {
     // Get initial session
     const initializeAuth = async () => {
       const { data } = await supabase.auth.getSession();
+      console.log('Initial auth session:', data.session ? 'logged in' : 'not logged in');
       setSession(data.session);
       setUser(data.session?.user || null);
       setIsLoading(false);
@@ -34,21 +44,22 @@ export const SupabaseProvider = ({ children }: { children: React.ReactNode }) =>
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log('Auth state changed:', event);
+        console.log('Auth state changed:', event, currentSession?.user?.id);
         
-        setSession(currentSession);
-        setUser(currentSession?.user || null);
-        setIsLoading(false);
-        
-        // For debugging purposes - log the current user state
         if (event === 'SIGNED_OUT') {
-          console.log('User signed out, user state is:', currentSession?.user || null);
+          console.log('User signed out, clearing state');
+          setSession(null);
+          setUser(null);
           
-          // Force refresh supabase state to ensure it's clean
-          const { data } = await supabase.auth.getSession();
-          setSession(data.session);
-          setUser(data.session?.user || null);
+          // Force a refresh to ensure clean state
+          window.location.reload();
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          console.log('User signed in or token refreshed');
+          setSession(currentSession);
+          setUser(currentSession?.user || null);
         }
+        
+        setIsLoading(false);
       }
     );
 
@@ -58,7 +69,7 @@ export const SupabaseProvider = ({ children }: { children: React.ReactNode }) =>
   }, []);
 
   return (
-    <SupabaseContext.Provider value={{ user, session, isLoading }}>
+    <SupabaseContext.Provider value={{ user, session, isLoading, refreshAuth }}>
       {children}
     </SupabaseContext.Provider>
   );

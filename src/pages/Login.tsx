@@ -9,7 +9,6 @@ import { Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
 import { RiotApiResponse } from '@/types/riotTypes';
-import { Json } from '@/integrations/supabase/types';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +63,7 @@ const Login = () => {
     
     try {
       // Sample data that would come from Riot API - simplified to ensure it works reliably
-      const sampleData: RiotApiResponse = {
+      const sampleData = {
         summoner: {
           id: "sUmM0n3r1D12345",
           puuid: "pUU1D_1234567890abcdefghijklmnopqrstuvwxyz",
@@ -81,15 +80,14 @@ const Login = () => {
         profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
       };
       
-      // Instead of creating a new user with SignUp (which hits rate limits), 
-      // create a test session directly using the admin sign-in method
+      // Use a consistent test account to avoid rate limits
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: "test@example.com",
         password: "Test123456!",
       });
       
       if (signInError) {
-        // If sign-in fails (e.g., user doesn't exist), create the user first
+        // If user doesn't exist yet, create it
         if (signInError.message.includes("Invalid login credentials")) {
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: "test@example.com",
@@ -102,27 +100,36 @@ const Login = () => {
           });
           
           if (signUpError) {
-            throw signUpError;
+            console.error("Error creating test user:", signUpError);
+            throw new Error("Failed to create test account");
           }
           
-          // Use the newly created user
+          // If user was created successfully
           if (signUpData.user) {
-            // Convert RiotApiResponse to JSON to avoid typing issues
-            const riotDataJson = JSON.stringify(sampleData);
-            
             // Update profile with sample data
             const { error: updateError } = await supabase
               .from('profiles')
               .update({
                 riot_id: sampleData.summoner.riotId,
-                riot_data: JSON.parse(riotDataJson),
+                riot_data: sampleData,
                 username: "TestUser",
                 balance: 10000
               })
               .eq('id', signUpData.user.id);
             
             if (updateError) {
-              throw updateError;
+              console.error("Error updating profile:", updateError);
+              throw new Error("Failed to set up test account profile");
+            }
+            
+            // Now sign in with the newly created account
+            const { error: secondSignInError } = await supabase.auth.signInWithPassword({
+              email: "test@example.com",
+              password: "Test123456!",
+            });
+            
+            if (secondSignInError) {
+              throw new Error("Created test account but couldn't sign in");
             }
             
             toast({
@@ -133,24 +140,24 @@ const Login = () => {
             navigate('/', { replace: true });
           }
         } else {
-          throw signInError;
+          console.error("Unexpected sign-in error:", signInError);
+          throw new Error(signInError.message || "Login failed");
         }
       } else if (signInData.user) {
         // User already exists, just update the profile with sample data
-        const riotDataJson = JSON.stringify(sampleData);
-        
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
             riot_id: sampleData.summoner.riotId,
-            riot_data: JSON.parse(riotDataJson),
+            riot_data: sampleData,
             username: "TestUser",
             balance: 10000
           })
           .eq('id', signInData.user.id);
         
         if (updateError) {
-          throw updateError;
+          console.error("Error updating existing profile:", updateError);
+          throw new Error("Failed to update test account profile");
         }
         
         toast({

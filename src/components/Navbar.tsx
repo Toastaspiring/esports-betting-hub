@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, Trophy, Wallet, LogOut } from 'lucide-react';
 import { MOCK_USER } from '@/lib/constants';
@@ -12,29 +11,40 @@ import { parseRiotData } from '@/services/profileService';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useSupabase();
+  const { user, refreshAuth } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Fetch profile data for the currently logged-in user
+  const [renderKey, setRenderKey] = useState(0);
+  
+  useEffect(() => {
+    setRenderKey(prev => prev + 1);
+  }, [user]);
+  
   const { data: profile, refetch } = useQuery({
-    queryKey: ['navbarProfile', user?.id],
+    queryKey: ['navbarProfile', user?.id, renderKey],
     queryFn: async () => {
-      if (!user) return null;
+      if (!user) {
+        console.log('No user, not fetching profile');
+        return null;
+      }
       
+      console.log('Fetching profile for user:', user.id);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
       return data;
     },
     enabled: !!user,
   });
   
-  // Extract data for display
   const parsedRiotData = parseRiotData(profile?.riot_data);
   const hasRiotData = parsedRiotData && parsedRiotData.summoner && parsedRiotData.summoner.profileIconId;
   const profileIconUrl = hasRiotData
@@ -45,6 +55,9 @@ const Navbar = () => {
   
   const handleLogout = async () => {
     try {
+      console.log('Logging out...');
+      setIsOpen(false);
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -57,7 +70,6 @@ const Navbar = () => {
         description: "You have been successfully logged out",
       });
       
-      // Force a refresh of the page to ensure all auth state is cleared
       window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
@@ -73,7 +85,6 @@ const Navbar = () => {
     <header className="fixed top-0 left-0 right-0 z-50 py-4 glass-panel backdrop-blur-xl bg-white/70 border-b border-slate-200/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="flex items-center justify-between">
-          {/* Logo */}
           <Link 
             to="/" 
             className="flex items-center space-x-3 group"
@@ -86,7 +97,6 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/" className="font-medium text-sm text-foreground/80 hover:text-primary transition-colors">
               Home
@@ -102,7 +112,6 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* User Section */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
@@ -147,7 +156,6 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Navigation Toggle */}
           <button 
             className="md:hidden p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             onClick={() => setIsOpen(!isOpen)}
@@ -158,7 +166,6 @@ const Navbar = () => {
         </nav>
       </div>
 
-      {/* Mobile Navigation Menu */}
       {isOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-background border-b border-slate-200/20 shadow-lg animate-slide-in-bottom">
           <div className="container px-4 py-4 flex flex-col space-y-3">
@@ -225,10 +232,7 @@ const Navbar = () => {
                       </Link>
                       
                       <button
-                        onClick={() => {
-                          handleLogout();
-                          setIsOpen(false);
-                        }}
+                        onClick={handleLogout}
                         className="p-2 rounded-md text-slate-500 hover:bg-slate-700/50 transition-colors"
                         aria-label="Logout"
                       >
