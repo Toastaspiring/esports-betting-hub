@@ -6,6 +6,8 @@ import { Trophy, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { linkRiotAccount, refreshRiotAccountData } from '@/services/riotService';
+import { RiotApiResponse } from '@/types/riotTypes';
+import { parseRiotData } from '@/services/profileService';
 
 interface RiotAccountProps {
   riotId: string;
@@ -19,6 +21,9 @@ export const RiotAccount = ({ riotId, setRiotId, riotData, hasSummoner, onSucces
   const { toast } = useToast();
   const [isConnectingRiot, setIsConnectingRiot] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Parse riot data to ensure proper typing
+  const parsedRiotData = parseRiotData(riotData);
 
   const connectRiotAccount = async () => {
     if (!riotId) return;
@@ -80,9 +85,9 @@ export const RiotAccount = ({ riotId, setRiotId, riotData, hasSummoner, onSucces
             </div>
             <AlertDescription>
               Your Riot Games account is connected: <strong>{riotId}</strong>
-              {hasSummoner && (
+              {hasSummoner && parsedRiotData?.summoner && (
                 <div className="mt-1 text-sm">
-                  Summoner Level: {riotData.summoner.summonerLevel}
+                  Summoner Level: {parsedRiotData.summoner.summonerLevel}
                 </div>
               )}
             </AlertDescription>

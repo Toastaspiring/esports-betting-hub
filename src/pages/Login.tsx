@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
+import { RiotApiResponse } from '@/types/riotTypes';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSampleLoading, setIsSampleLoading] = useState(false);
   const { user } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -54,6 +56,70 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  // Sample data login for testing
+  const handleSampleLogin = async () => {
+    setIsSampleLoading(true);
+    
+    try {
+      // Sample data that would come from Riot API
+      const sampleData: RiotApiResponse = {
+        summoner: {
+          id: "sUmM0n3r1D12345",
+          puuid: "pUU1D_1234567890abcdefghijklmnopqrstuvwxyz",
+          name: "SummonerName",
+          profileIconId: 4567,
+          summonerLevel: 287,
+          riotId: "SummonerName#EUW"
+        },
+        account: {
+          gameName: "SummonerName",
+          tagLine: "EUW"
+        },
+        region: "europe",
+        profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
+      };
+      
+      // Create anonymous user for testing
+      const { data: authData, error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',  // Using Discord as a temporary provider for sample login
+        options: {
+          skipBrowserRedirect: true  // Don't redirect to Discord
+        }
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      // Get URL from the auth data
+      const { data: sessionData } = await supabase.auth.signInAnonymously();
+      
+      if (sessionData) {
+        // Update user profile with the sample Riot data
+        await supabase.from('profiles').update({
+          riot_id: sampleData.summoner.riotId,
+          riot_data: sampleData
+        }).eq('id', sessionData.user.id);
+        
+        toast({
+          title: "Sample Login Successful",
+          description: "You're logged in with sample data",
+        });
+        
+        navigate('/', { replace: true });
+      }
+    } catch (error) {
+      console.error('Sample login error:', error);
+      toast({
+        title: "Sample Login Failed",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSampleLoading(false);
+    }
+  };
   
   return (
     <>
@@ -80,7 +146,7 @@ const Login = () => {
                 Use your Riot Games account to sign in
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-8">
+            <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
               <Button 
                 onClick={handleRiotLogin}
                 className="w-full bg-red-600 hover:bg-red-700 text-white"
@@ -103,6 +169,26 @@ const Login = () => {
                       <path d="M12.534 21.77l-2.13-2.13h-2.13l-4.26-4.26V13.25L2.774 12l1.24-1.25v-2.13l4.26-4.26h2.13l2.13-2.13 2.13 2.13h2.13l4.26 4.26v2.13L22.294 12l-1.24 1.25v2.13l-4.26 4.26h-2.13l-2.13 2.13z" />
                     </svg>
                     Sign in with Riot
+                  </>
+                )}
+              </Button>
+              
+              {/* Test Login Button with Sample Data */}
+              <Button 
+                onClick={handleSampleLogin}
+                variant="outline"
+                className="w-full border-gray-300"
+                size="lg"
+                disabled={isSampleLoading}
+              >
+                {isSampleLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading Sample Data...
+                  </>
+                ) : (
+                  <>
+                    Test Login with Sample Data
                   </>
                 )}
               </Button>

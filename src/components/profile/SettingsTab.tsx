@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { LogOut } from 'lucide-react';
 import { RiotAccount } from './RiotAccount';
+import { RiotApiResponse } from '@/types/riotTypes';
 
 interface SettingsTabProps {
   user: any;
