@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Match } from '@/lib/constants';
 
@@ -31,16 +30,13 @@ const TournamentBracket = ({ matches }: TournamentBracketProps) => {
   useEffect(() => {
     if (!matches.length) return;
     
-    // In a real app, we would have a proper bracket structure from the backend
-    // Here we'll simulate a simplified bracket structure
-    
     // Group completed matches as early rounds
     const completedMatches = matches.filter(match => match.status === 'completed');
     
     // Group upcoming matches as later rounds
     const upcomingMatches = matches.filter(match => match.status === 'upcoming');
     
-    // For this simplified version, we'll create a mock bracket structure
+    // For this simplified version, we'll create a bracket structure from actual data
     // Round 1 (quarterfinals)
     const round1: BracketMatch[] = completedMatches.slice(0, 4).map((match, index) => ({
       id: match.id,
@@ -65,12 +61,12 @@ const TournamentBracket = ({ matches }: TournamentBracketProps) => {
       id: `semifinal-${index + 1}`,
       round: 2,
       position: index + 1,
-      teamA: index === 0 
+      teamA: index === 0 && round1.length > 0
         ? { id: round1[0]?.winner === round1[0]?.teamA?.id ? round1[0]?.teamA?.id : round1[0]?.teamB?.id,
             name: round1[0]?.winner === round1[0]?.teamA?.id ? round1[0]?.teamA?.name : round1[0]?.teamB?.name,
             logo: round1[0]?.winner === round1[0]?.teamA?.id ? round1[0]?.teamA?.logo : round1[0]?.teamB?.logo }
         : null,
-      teamB: index === 0 
+      teamB: index === 0 && round1.length > 1
         ? { id: round1[1]?.winner === round1[1]?.teamA?.id ? round1[1]?.teamA?.id : round1[1]?.teamB?.id,
             name: round1[1]?.winner === round1[1]?.teamA?.id ? round1[1]?.teamA?.name : round1[1]?.teamB?.name,
             logo: round1[1]?.winner === round1[1]?.teamA?.id ? round1[1]?.teamA?.logo : round1[1]?.teamB?.logo }

@@ -16,7 +16,15 @@ import MyBets from "@/pages/MyBets";
 import Tournament from "@/pages/Tournament";
 import Contact from "@/pages/Contact";
 
-const queryClient = new QueryClient();
+// Create a new QueryClient instance with caching options
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

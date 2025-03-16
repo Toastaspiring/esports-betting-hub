@@ -5,40 +5,45 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Search } from 'lucide-react';
-import { MOCK_MATCHES } from '@/lib/constants';
 import MatchCard from '@/components/MatchCard';
 import { fetchMatches } from '@/services/supabaseService';
 import { Button } from '@/components/ui/button';
 import { seedDatabase } from '@/lib/seedDatabase';
 import { useToast } from '@/components/ui/use-toast';
+import { Match } from '@/lib/constants';
 
 const Matches = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   
-  // Fetch matches data
+  // Properly type the fetchMatches function for TanStack Query
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['matches'],
-    queryFn: fetchMatches,
+    queryFn: async () => {
+      return await fetchMatches();
+    },
   });
   
-  // Use mock data if no matches are returned from the database
-  const matchesData = (data?.data && data.data.length > 0) ? data.data : MOCK_MATCHES;
+  const matchesData = data?.data || [];
   
   // Filter matches based on search query
-  const filteredMatches = matchesData.filter(match => 
+  const filteredMatches = matchesData.filter((match: Match) => 
     match.teamA.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     match.teamB.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     match.league.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const upcomingMatches = filteredMatches.filter(match => match.status === 'upcoming');
-  const liveMatches = filteredMatches.filter(match => match.status === 'live');
-  const completedMatches = filteredMatches.filter(match => match.status === 'completed');
+  const upcomingMatches = filteredMatches.filter((match: Match) => match.status === 'upcoming');
+  const liveMatches = filteredMatches.filter((match: Match) => match.status === 'live');
+  const completedMatches = filteredMatches.filter((match: Match) => match.status === 'completed');
   
   const handleSeedDatabase = async () => {
     try {
       await seedDatabase();
+      toast({
+        title: "Database seeded",
+        description: "Mock data has been added to the database.",
+      });
       refetch();
     } catch (error) {
       console.error("Error seeding database:", error);
@@ -78,7 +83,7 @@ const Matches = () => {
               />
             </div>
             
-            {(!data?.data || data.data.length === 0) && (
+            {matchesData.length === 0 && (
               <Button 
                 variant="outline" 
                 onClick={handleSeedDatabase}
@@ -118,7 +123,7 @@ const Matches = () => {
                 </div>
               ) : liveMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {liveMatches.map(match => (
+                  {liveMatches.map((match: Match) => (
                     <MatchCard key={match.id} match={match} />
                   ))}
                 </div>
@@ -137,7 +142,7 @@ const Matches = () => {
                 </div>
               ) : upcomingMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {upcomingMatches.map(match => (
+                  {upcomingMatches.map((match: Match) => (
                     <MatchCard key={match.id} match={match} />
                   ))}
                 </div>
@@ -160,7 +165,7 @@ const Matches = () => {
                 </div>
               ) : completedMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {completedMatches.map(match => (
+                  {completedMatches.map((match: Match) => (
                     <MatchCard key={match.id} match={match} />
                   ))}
                 </div>

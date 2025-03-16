@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MOCK_MATCHES } from '@/lib/constants';
 import { fetchMatches } from '@/services/supabaseService';
 import MatchCard from './MatchCard';
 import { ChevronRight } from 'lucide-react';
 import { seedDatabase } from '@/lib/seedDatabase';
 import { Button } from '@/components/ui/button';
 import { useSupabase } from '@/hooks/useSupabase';
+import { Match } from '@/lib/constants';
 
 const FeaturedMatches = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -24,15 +24,19 @@ const FeaturedMatches = () => {
   // Fetch matches from Supabase
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['featuredMatches'],
-    queryFn: () => fetchMatches('upcoming'),
-    enabled: true,
+    queryFn: async () => {
+      return await fetchMatches('upcoming');
+    },
   });
   
-  const matches = data?.data || MOCK_MATCHES.slice(0, 2);
+  const matches = data?.data || [];
+  
   const handleSeedDatabase = async () => {
-    const success = await seedDatabase();
-    if (success) {
+    try {
+      await seedDatabase();
       refetch();
+    } catch (error) {
+      console.error("Error seeding database:", error);
     }
   };
   
@@ -55,17 +59,18 @@ const FeaturedMatches = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Removed user conditional check so the button is always visible */}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSeedDatabase}
-              className={`transition-all duration-700 ${
-                isVisible ? 'opacity-100 transform-none' : 'opacity-0 translate-x-4'
-              }`}
-            >
-              Seed Database
-            </Button>
+            {matches.length === 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSeedDatabase}
+                className={`transition-all duration-700 ${
+                  isVisible ? 'opacity-100 transform-none' : 'opacity-0 translate-x-4'
+                }`}
+              >
+                Seed Database
+              </Button>
+            )}
             
             <a 
               href="/matches" 
@@ -96,19 +101,23 @@ const FeaturedMatches = () => {
         {/* Featured Matches Grid */}
         {!isLoading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {matches.slice(0, 2).map((match, index) => (
+            {matches.slice(0, 2).map((match: Match, index: number) => (
               <div 
                 key={match.id}
                 className={`transition-all duration-700 delay-${(index + 1) * 150} ${
                   isVisible ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4'
                 }`}
               >
-                <MatchCard match={{
-                  ...match,
-                  status: match.status as "upcoming" | "live" | "completed"
-                }} featured />
+                <MatchCard match={match} featured />
               </div>
             ))}
+            
+            {matches.length === 0 && (
+              <div className="col-span-1 md:col-span-2 text-center py-12">
+                <p className="text-lg text-muted-foreground">No upcoming matches found</p>
+                <p className="text-sm text-muted-foreground mt-2">Use the "Seed Database" button to add some matches</p>
+              </div>
+            )}
           </div>
         )}
         

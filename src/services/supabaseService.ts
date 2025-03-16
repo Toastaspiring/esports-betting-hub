@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Match, Team, League, User } from "@/lib/constants";
 
@@ -121,7 +120,7 @@ export const createTeam = async (team: { name: string, logo: string, league_id: 
 };
 
 // Match functions
-export const fetchMatches = async (status?: string) => {
+export const fetchMatches = async (statusFilter?: string) => {
   let query = supabase
     .from('matches')
     .select(`
@@ -131,8 +130,8 @@ export const fetchMatches = async (status?: string) => {
       teamB:teams!matches_team_b_id_fkey(*)
     `);
   
-  if (status) {
-    query = query.eq('status', status);
+  if (statusFilter) {
+    query = query.eq('status', statusFilter);
   }
   
   const { data, error } = await query;
