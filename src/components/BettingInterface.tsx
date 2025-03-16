@@ -1,8 +1,13 @@
 
 import { useState } from 'react';
 import { Match } from '@/lib/constants';
-import { ArrowRight, Trophy, X } from 'lucide-react';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/components/ui/use-toast';
+import { ArrowRight, Loader2, Trophy, X } from 'lucide-react';
+import { placeBet } from '@/services/supabaseService';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from '@/components/ui/button';
 
 interface BettingInterfaceProps {
   match: Match;
@@ -12,7 +17,11 @@ interface BettingInterfaceProps {
 const BettingInterface = ({ match, onClose }: BettingInterfaceProps) => {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [betAmount, setBetAmount] = useState<number>(100);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const { toast } = useToast();
+  const { user } = useSupabase();
+  const navigate = useNavigate();
   
   const handleBetAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -28,7 +37,12 @@ const BettingInterface = ({ match, onClose }: BettingInterfaceProps) => {
     return Math.round(betAmount * odds);
   };
   
-  const placeBet = () => {
+  const handlePlaceBet = async () => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    
     if (!selectedTeam) {
       toast({
         title: "Select a team",
@@ -47,13 +61,39 @@ const BettingInterface = ({ match, onClose }: BettingInterfaceProps) => {
       return;
     }
     
-    const teamName = selectedTeam === match.teamA.id ? match.teamA.name : match.teamB.name;
+    setIsLoading(true);
     
-    toast({
-      title: "Bet placed successfully!",
-      description: `You bet ${betAmount} LP on ${teamName}.`,
-    });
-    
+    try {
+      const teamOdds = selectedTeam === match.teamA.id ? match.odds.teamA : match.odds.teamB;
+      const { success, message } = await placeBet(match.id, selectedTeam, betAmount, teamOdds);
+      
+      if (success) {
+        toast({
+          title: "Bet placed successfully!",
+          description: message,
+        });
+        onClose();
+      } else {
+        toast({
+          title: "Error placing bet",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error placing bet:', error);
+      toast({
+        title: "Error placing bet",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const navigateToLogin = () => {
+    navigate('/login');
     onClose();
   };
   
@@ -192,13 +232,46 @@ const BettingInterface = ({ match, onClose }: BettingInterfaceProps) => {
           
           {/* Place Bet Button */}
           <button
-            onClick={placeBet}
-            className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors"
+            onClick={handlePlaceBet}
+            className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+            disabled={isLoading}
           >
-            Place Bet
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Place Bet'
+            )}
           </button>
         </div>
       </div>
+      
+      {/* Login Prompt Dialog */}
+      <Dialog open={showLoginPrompt} onOpenChange={(open) => setShowLoginPrompt(open)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to place bets.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Login to your account to place bets and track your winnings.
+            </p>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+            <Button variant="outline" onClick={() => setShowLoginPrompt(false)}>
+              Cancel
+            </Button>
+            <Button onClick={navigateToLogin}>
+              Login Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

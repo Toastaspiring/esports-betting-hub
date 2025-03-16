@@ -1,27 +1,27 @@
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { MOCK_MATCHES } from '@/lib/constants';
 import MatchCard from '@/components/MatchCard';
+import { fetchMatches } from '@/services/supabaseService';
 
 const Matches = () => {
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
-  useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Fetch matches data
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['matches'],
+    queryFn: fetchMatches,
+  });
+  
+  const matches = data?.data || MOCK_MATCHES;
   
   // Filter matches based on search query
-  const filteredMatches = MOCK_MATCHES.filter(match => 
+  const filteredMatches = matches.filter(match => 
     match.teamA.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     match.teamB.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     match.league.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -58,6 +58,13 @@ const Matches = () => {
             />
           </div>
           
+          {/* Error State */}
+          {error && (
+            <div className="text-center p-8 border border-red-200 rounded-lg bg-red-50">
+              <p className="text-red-500">Failed to load matches. Please try again later.</p>
+            </div>
+          )}
+          
           {/* Tabs for different match statuses */}
           <Tabs defaultValue="upcoming" className="w-full">
             <TabsList className="grid w-full md:w-auto grid-cols-3 mb-8">
@@ -75,14 +82,8 @@ const Matches = () => {
             
             <TabsContent value="live" className="space-y-6">
               {isLoading ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {[1, 2, 3].map(i => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-0">
-                        <div className="h-32 bg-secondary/50 rounded-md"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="flex justify-center items-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               ) : liveMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -100,14 +101,8 @@ const Matches = () => {
             
             <TabsContent value="upcoming" className="space-y-6">
               {isLoading ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {[1, 2, 3].map(i => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-0">
-                        <div className="h-32 bg-secondary/50 rounded-md"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="flex justify-center items-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               ) : upcomingMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -129,14 +124,8 @@ const Matches = () => {
             
             <TabsContent value="completed" className="space-y-6">
               {isLoading ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {[1, 2, 3].map(i => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-0">
-                        <div className="h-32 bg-secondary/50 rounded-md"></div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="flex justify-center items-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               ) : completedMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
