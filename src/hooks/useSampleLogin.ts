@@ -15,71 +15,27 @@ export const useSampleLogin = () => {
     setIsLoading(true);
     
     try {
-      // Sample data that would come from Riot API
-      const sampleData = {
-        summoner: {
-          id: "sampleSummonerId123",
-          puuid: "samplePuuid123456789",
-          name: "TestSummoner",
-          profileIconId: 4567,
-          summonerLevel: 287,
-          riotId: "TestSummoner#TEST"
-        },
-        account: {
-          gameName: "TestSummoner",
-          tagLine: "TEST"
-        },
-        region: "europe",
-        profilePictureUrl: "https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/4567.png"
-      };
-      
-      // Email and password for test account - consistent for easy testing
+      // Email and password for test account - using the pre-created test account
       const testEmail = "test@example.com";
       const testPassword = "Test123456!";
 
-      // First, try to sign in with the test account
-      let { data: userData, error: signInError } = await supabase.auth.signInWithPassword({
+      // Sign in with the pre-created test account (no need to create one)
+      const { data: userData, error: signInError } = await supabase.auth.signInWithPassword({
         email: testEmail,
         password: testPassword,
       });
       
-      // If login fails because the account doesn't exist
-      if (signInError && signInError.message.includes("Invalid login credentials")) {
-        console.log("Couldn't sign in, creating test account...");
-        
-        // Try a different approach - use anonymous auth if available
-        // or use a pre-created account instead of trying to create a new one
-        
-        // For now, let's inform the user about the rate limit issue
-        throw new Error("Unable to login with sample data: The test account cannot be created due to email rate limits. Please try again later or use a real Riot account.");
-      } else if (signInError) {
-        // Some other error occurred during sign in
-        throw signInError;
+      // If login fails - handle the error
+      if (signInError) {
+        console.error("Sample login sign-in error:", signInError);
+        throw new Error(`Unable to login with sample data: ${signInError.message}`);
       }
       
       if (!userData?.user) {
         throw new Error("Failed to get user data");
       }
       
-      // Update the profile with sample data
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          riot_id: sampleData.summoner.riotId,
-          riot_data: sampleData,
-          username: "TestUser",
-          balance: 10000,
-          bets_won: 15,
-          bets_lost: 5,
-          avatar_url: sampleData.profilePictureUrl
-        })
-        .eq('id', userData.user.id);
-      
-      if (updateError) {
-        console.error("Error updating profile:", updateError);
-        // If updating fails, we can still proceed since the user is logged in
-        console.log("Continuing despite profile update error");
-      }
+      console.log("Successfully logged in with test account, refreshing auth...");
       
       // Manually refresh the auth context to make sure app recognizes the user is logged in
       await refreshAuth();
