@@ -7,7 +7,7 @@ import {
   importLiquipediaTeams,
   importLiquipediaTournaments,
   importLiquipediaPlayers
-} from '@/services/supabaseService';
+} from '@/services/importService';
 import AdminCard from '@/components/admin/AdminCard';
 import ImportResults from '@/components/admin/ImportResults';
 
