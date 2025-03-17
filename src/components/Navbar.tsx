@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, Trophy, Wallet, LogOut } from 'lucide-react';
@@ -112,7 +113,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                <AdminLink />
+                <AdminLink href="/admin" label="Admin" />
                 <Link to="/my-bets" className="font-medium text-sm text-foreground/80 hover:text-primary transition-colors">
                   My Bets
                 </Link>
