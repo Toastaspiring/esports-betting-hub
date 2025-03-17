@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import FeaturedMatches from '@/components/FeaturedMatches';
-import LiquipediaMatchesViewer from '@/components/LiquipediaMatchesViewer';
 import UserStats from '@/components/UserStats';
 import { MOCK_MATCHES } from '@/lib/constants';
 import BettingInterface from '@/components/BettingInterface';
@@ -36,12 +36,6 @@ const Index = () => {
         <HeroSection />
         
         <FeaturedMatches />
-        
-        <section className="py-12 bg-gray-50/50 dark:bg-slate-950/50">
-          <div className="container px-4 mx-auto">
-            <LiquipediaMatchesViewer />
-          </div>
-        </section>
         
         <UserStats />
         
