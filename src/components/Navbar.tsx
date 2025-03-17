@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { parseRiotData } from '@/services/profileService';
 import { signOut } from '@/services/supabaseService';
+import AdminLink from '@/components/admin/AdminLink';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,6 +112,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
+                <AdminLink />
                 <Link to="/my-bets" className="font-medium text-sm text-foreground/80 hover:text-primary transition-colors">
                   My Bets
                 </Link>
