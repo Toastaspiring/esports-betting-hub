@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Database, Settings } from 'lucide-react';
 
-interface AdminCardProps {
+export interface AdminCardProps {
   title: string;
   description: string;
   icon: string;

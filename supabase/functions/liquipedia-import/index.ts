@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.188.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.36-alpha/deno-dom-wasm.ts";
@@ -86,177 +85,211 @@ async function callLiquipediaAPI(endpoint: string, params: Record<string, string
 }
 
 async function importMatches(supabase: any) {
-  // Get upcoming and ongoing matches
-  const data = await callLiquipediaAPI("parse", {
-    action: "parse",
-    page: "Liquipedia:Upcoming_and_ongoing_matches",
-    prop: "text",
-  });
+  try {
+    // Get upcoming and ongoing matches
+    const data = await callLiquipediaAPI("parse", {
+      page: "Liquipedia:Upcoming_and_ongoing_matches",
+      action: "parse",
+      prop: "text",
+    });
 
-  // Extract matches from HTML response
-  const htmlContent = data.parse.text['*'];
-  const matches = extractMatchesFromHTML(htmlContent);
-  
-  console.log(`Found ${matches.length} matches`);
-  
-  // Store matches in the database
-  let importedCount = 0;
-  for (const match of matches) {
-    // First check if we need to create the teams
-    let teamA = await getOrCreateTeam(supabase, match.teamA);
-    let teamB = await getOrCreateTeam(supabase, match.teamB);
+    // Extract matches from HTML response
+    const htmlContent = data.parse.text['*'];
+    const matches = extractMatchesFromHTML(htmlContent);
     
-    // Check if we need to create or get the league
-    let league = await getOrCreateLeague(supabase, match.tournament);
+    console.log(`Found ${matches.length} matches`);
     
-    // Check if this match already exists in our database
-    const { data: existingMatches } = await supabase
-      .from('matches')
-      .select('id')
-      .eq('team_a_id', teamA.id)
-      .eq('team_b_id', teamB.id)
-      .eq('match_date', match.date)
-      .limit(1);
+    // Store matches in the database
+    let importedCount = 0;
+    for (const match of matches) {
+      // First check if we need to create the teams
+      let teamA = await getOrCreateTeam(supabase, match.teamA);
+      let teamB = await getOrCreateTeam(supabase, match.teamB);
       
-    if (existingMatches && existingMatches.length > 0) {
-      console.log(`Match between ${match.teamA.name} and ${match.teamB.name} already exists`);
-      continue;
+      // Check if we need to create or get the league
+      let league = await getOrCreateLeague(supabase, match.tournament);
+      
+      // Check if this match already exists in our database
+      const { data: existingMatches } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('team_a_id', teamA.id)
+        .eq('team_b_id', teamB.id)
+        .eq('match_date', match.date)
+        .limit(1);
+        
+      if (existingMatches && existingMatches.length > 0) {
+        console.log(`Match between ${match.teamA.name} and ${match.teamB.name} already exists`);
+        continue;
+      }
+      
+      // Create the match
+      const { error } = await supabase
+        .from('matches')
+        .insert({
+          team_a_id: teamA.id,
+          team_b_id: teamB.id,
+          league_id: league.id,
+          match_date: match.date,
+          odds_team_a: calculateOdds(teamA.win_rate || 0.5),
+          odds_team_b: calculateOdds(teamB.win_rate || 0.5),
+          status: calculateMatchStatus(match.date)
+        });
+        
+      if (error) {
+        console.error(`Error creating match: ${error.message}`);
+      } else {
+        importedCount++;
+      }
     }
     
-    // Create the match
-    const { error } = await supabase
-      .from('matches')
-      .insert({
-        team_a_id: teamA.id,
-        team_b_id: teamB.id,
-        league_id: league.id,
-        match_date: match.date,
-        odds_team_a: calculateOdds(teamA.win_rate || 0.5),
-        odds_team_b: calculateOdds(teamB.win_rate || 0.5),
-        status: 'upcoming'
-      });
-      
-    if (error) {
-      console.error(`Error creating match: ${error.message}`);
-    } else {
-      importedCount++;
-    }
+    return { 
+      success: true, 
+      message: `Imported ${importedCount} new matches from Liquipedia`,
+      total: matches.length,
+      imported: importedCount
+    };
+  } catch (error) {
+    console.error("Error importing matches:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+function calculateMatchStatus(matchDate: string): 'upcoming' | 'live' | 'completed' {
+  const now = new Date();
+  const matchTime = new Date(matchDate);
+  
+  // If match is in the past (over 3 hours ago)
+  if (matchTime.getTime() < now.getTime() - 3 * 60 * 60 * 1000) {
+    return 'completed';
   }
   
-  return { 
-    success: true, 
-    message: `Imported ${importedCount} new matches from Liquipedia`,
-    total: matches.length,
-    imported: importedCount
-  };
+  // If match is now or within last 3 hours
+  if (matchTime.getTime() <= now.getTime() && 
+      matchTime.getTime() > now.getTime() - 3 * 60 * 60 * 1000) {
+    return 'live';
+  }
+  
+  // Otherwise it's upcoming
+  return 'upcoming';
 }
 
 async function importTeams(supabase: any) {
-  // Fetch team data from Liquipedia
-  const data = await callLiquipediaAPI("parse", {
-    action: "parse",
-    page: "Portal:Teams",
-    prop: "text",
-  });
+  try {
+    // Fetch team data from Liquipedia
+    const data = await callLiquipediaAPI("parse", {
+      action: "parse",
+      page: "Portal:Teams",
+      prop: "text",
+    });
 
-  const htmlContent = data.parse.text['*'];
-  const teams = extractTeamsFromHTML(htmlContent);
-  
-  console.log(`Found ${teams.length} teams`);
-  
-  let importedCount = 0;
-  
-  for (const team of teams) {
-    // Check if team exists
-    const { data: existingTeams } = await supabase
-      .from('teams')
-      .select('id')
-      .eq('name', team.name)
-      .limit(1);
+    const htmlContent = data.parse.text['*'];
+    const teams = extractTeamsFromHTML(htmlContent);
+    
+    console.log(`Found ${teams.length} teams`);
+    
+    let importedCount = 0;
+    
+    for (const team of teams) {
+      // Check if team exists
+      const { data: existingTeams } = await supabase
+        .from('teams')
+        .select('id')
+        .ilike('name', team.name)
+        .limit(1);
+        
+      if (existingTeams && existingTeams.length > 0) {
+        console.log(`Team ${team.name} already exists`);
+        continue;
+      }
       
-    if (existingTeams && existingTeams.length > 0) {
-      console.log(`Team ${team.name} already exists`);
-      continue;
+      // Get or create league
+      const league = await getOrCreateLeague(supabase, team.region || "International");
+      
+      // Create team
+      const { error } = await supabase
+        .from('teams')
+        .insert({
+          name: team.name,
+          logo: team.logo,
+          league_id: league.id,
+          win_rate: team.win_rate || 0.5
+        });
+        
+      if (error) {
+        console.error(`Error creating team: ${error.message}`);
+      } else {
+        importedCount++;
+      }
     }
     
-    // Get or create league
-    const league = await getOrCreateLeague(supabase, team.region || "International");
-    
-    // Create team
-    const { error } = await supabase
-      .from('teams')
-      .insert({
-        name: team.name,
-        logo: team.logo,
-        league_id: league.id,
-        win_rate: team.win_rate || 0.5
-      });
-      
-    if (error) {
-      console.error(`Error creating team: ${error.message}`);
-    } else {
-      importedCount++;
-    }
+    return { 
+      success: true, 
+      message: `Imported ${importedCount} new teams from Liquipedia`,
+      total: teams.length,
+      imported: importedCount
+    };
+  } catch (error) {
+    console.error("Error importing teams:", error);
+    return { success: false, message: error.message };
   }
-  
-  return { 
-    success: true, 
-    message: `Imported ${importedCount} new teams from Liquipedia`,
-    total: teams.length,
-    imported: importedCount
-  };
 }
 
 async function importTournaments(supabase: any) {
-  // Fetch tournament data from Liquipedia
-  const data = await callLiquipediaAPI("parse", {
-    action: "parse",
-    page: "Portal:Tournaments",
-    prop: "text",
-  });
+  try {
+    // Fetch tournament data from Liquipedia
+    const data = await callLiquipediaAPI("parse", {
+      action: "parse",
+      page: "Portal:Tournaments",
+      prop: "text",
+    });
 
-  const htmlContent = data.parse.text['*'];
-  const tournaments = extractTournamentsFromHTML(htmlContent);
-  
-  console.log(`Found ${tournaments.length} tournaments`);
-  
-  let importedCount = 0;
-  
-  for (const tournament of tournaments) {
-    // Check if tournament exists
-    const { data: existingLeagues } = await supabase
-      .from('leagues')
-      .select('id')
-      .eq('name', tournament.name)
-      .limit(1);
+    const htmlContent = data.parse.text['*'];
+    const tournaments = extractTournamentsFromHTML(htmlContent);
+    
+    console.log(`Found ${tournaments.length} tournaments`);
+    
+    let importedCount = 0;
+    
+    for (const tournament of tournaments) {
+      // Check if tournament exists
+      const { data: existingLeagues } = await supabase
+        .from('leagues')
+        .select('id')
+        .ilike('name', tournament.name)
+        .limit(1);
+        
+      if (existingLeagues && existingLeagues.length > 0) {
+        console.log(`Tournament ${tournament.name} already exists`);
+        continue;
+      }
       
-    if (existingLeagues && existingLeagues.length > 0) {
-      console.log(`Tournament ${tournament.name} already exists`);
-      continue;
+      // Create league
+      const { error } = await supabase
+        .from('leagues')
+        .insert({
+          name: tournament.name,
+          logo: tournament.logo,
+          region: tournament.region || "International"
+        });
+        
+      if (error) {
+        console.error(`Error creating tournament: ${error.message}`);
+      } else {
+        importedCount++;
+      }
     }
     
-    // Create league
-    const { error } = await supabase
-      .from('leagues')
-      .insert({
-        name: tournament.name,
-        logo: tournament.logo,
-        region: tournament.region || "International"
-      });
-      
-    if (error) {
-      console.error(`Error creating tournament: ${error.message}`);
-    } else {
-      importedCount++;
-    }
+    return { 
+      success: true, 
+      message: `Imported ${importedCount} new tournaments from Liquipedia`,
+      total: tournaments.length,
+      imported: importedCount
+    };
+  } catch (error) {
+    console.error("Error importing tournaments:", error);
+    return { success: false, message: error.message };
   }
-  
-  return { 
-    success: true, 
-    message: `Imported ${importedCount} new tournaments from Liquipedia`,
-    total: tournaments.length,
-    imported: importedCount
-  };
 }
 
 async function importPlayers(supabase: any) {
@@ -371,158 +404,298 @@ function calculateOdds(winRate: number): number {
 function extractMatchesFromHTML(html: string): any[] {
   console.log("Extracting matches from HTML");
   
-  // Use DOMParser to parse the HTML
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  
-  if (!doc) {
-    console.error("Failed to parse HTML");
-    return [];
-  }
-  
-  const matches = [];
-  
-  // Find all match containers
-  const matchContainers = doc.querySelectorAll(".infobox_matches_content");
-  
-  console.log(`Found ${matchContainers.length} match containers`);
-  
-  for (const container of matchContainers) {
-    // Extract tournament info
-    const tournamentElement = container.querySelector(".league-icon-small");
-    const tournamentName = tournamentElement?.getAttribute("title") || "Unknown Tournament";
+  try {
+    // Use DOMParser to parse the HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
     
-    // Find team elements
-    const teamElements = container.querySelectorAll(".team-template-image");
+    if (!doc) {
+      console.error("Failed to parse HTML");
+      return [];
+    }
     
-    if (teamElements.length >= 2) {
-      const teamAElement = teamElements[0];
-      const teamBElement = teamElements[1];
+    const matches = [];
+    
+    // Find all match containers - more specific selector
+    const matchContainers = doc.querySelectorAll(".infobox_matches_content");
+    
+    console.log(`Found ${matchContainers.length} match containers`);
+    
+    for (const container of matchContainers) {
+      try {
+        // Extract tournament info
+        const tournamentElement = container.querySelector(".league-icon-small");
+        const tournamentName = tournamentElement?.getAttribute("title") || "Unknown Tournament";
+        
+        // Find team elements
+        const teamElements = container.querySelectorAll("span.team-template-text a");
+        
+        if (teamElements.length >= 2) {
+          const teamAName = teamElements[0]?.textContent?.trim() || "Unknown Team";
+          const teamBName = teamElements[1]?.textContent?.trim() || "Unknown Team";
+          
+          // Get team logos
+          const teamALogoElement = container.querySelector(".team-left img");
+          const teamBLogoElement = container.querySelector(".team-right img");
+          
+          const teamALogo = teamALogoElement?.getAttribute("src") || "";
+          const teamBLogo = teamBLogoElement?.getAttribute("src") || "";
+          
+          // Get date/time
+          const dateElement = container.querySelector(".timer-object");
+          let matchDate = new Date();
+          
+          if (dateElement) {
+            const timestamp = dateElement.getAttribute("data-timestamp");
+            if (timestamp) {
+              matchDate = new Date(parseInt(timestamp) * 1000);
+            }
+          }
+          
+          console.log(`Extracted match: ${teamAName} vs ${teamBName} | Tournament: ${tournamentName}`);
+          
+          matches.push({
+            teamA: { 
+              name: teamAName, 
+              logo: teamALogo.startsWith("http") ? teamALogo : `https://liquipedia.net${teamALogo}` 
+            },
+            teamB: { 
+              name: teamBName, 
+              logo: teamBLogo.startsWith("http") ? teamBLogo : `https://liquipedia.net${teamBLogo}` 
+            },
+            tournament: tournamentName,
+            date: matchDate.toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error("Error extracting match:", error);
+      }
+    }
+    
+    // If we didn't find matches the usual way, try alternative approach
+    if (matches.length === 0) {
+      console.log("Trying alternative match extraction");
       
-      // Get team names
-      const teamAName = teamAElement.getAttribute("title") || "Team A";
-      const teamBName = teamBElement.getAttribute("title") || "Team B";
-      
-      // Get team logos
-      const teamALogoElement = teamAElement.querySelector("img");
-      const teamBLogoElement = teamBElement.querySelector("img");
-      
-      const teamALogo = teamALogoElement?.getAttribute("src") || "";
-      const teamBLogo = teamBLogoElement?.getAttribute("src") || "";
-      
-      // Get date/time
-      const dateElement = container.querySelector(".timer-object");
-      let matchDate = new Date();
-      
-      if (dateElement) {
-        const timestamp = dateElement.getAttribute("data-timestamp");
-        if (timestamp) {
-          matchDate = new Date(parseInt(timestamp) * 1000);
+      // Look for match tables
+      const matchRows = doc.querySelectorAll(".wikitable tr");
+      for (let i = 1; i < matchRows.length; i++) { // Skip header row
+        try {
+          const row = matchRows[i];
+          const cells = row.querySelectorAll("td");
+          
+          if (cells.length >= 4) {
+            const tournamentName = cells[0].textContent?.trim() || "Unknown Tournament";
+            const teamAName = cells[1].textContent?.trim() || "Unknown Team";
+            const teamBName = cells[2].textContent?.trim() || "Unknown Team";
+            const timeElement = cells[3].querySelector(".timer-object");
+            
+            // Skip if no team names found
+            if (teamAName === "Unknown Team" || teamBName === "Unknown Team") {
+              continue;
+            }
+            
+            let matchDate = new Date();
+            if (timeElement) {
+              const timestamp = timeElement.getAttribute("data-timestamp");
+              if (timestamp) {
+                matchDate = new Date(parseInt(timestamp) * 1000);
+              }
+            }
+            
+            matches.push({
+              teamA: { 
+                name: teamAName, 
+                logo: "" 
+              },
+              teamB: { 
+                name: teamBName, 
+                logo: "" 
+              },
+              tournament: tournamentName,
+              date: matchDate.toISOString(),
+            });
+          }
+        } catch (error) {
+          console.error("Error extracting match from table:", error);
         }
       }
-      
-      matches.push({
-        teamA: { 
-          name: teamAName, 
-          logo: teamALogo.startsWith("http") ? teamALogo : `https://liquipedia.net${teamALogo}` 
-        },
-        teamB: { 
-          name: teamBName, 
-          logo: teamBLogo.startsWith("http") ? teamBLogo : `https://liquipedia.net${teamBLogo}` 
-        },
-        tournament: tournamentName,
-        date: matchDate.toISOString(),
-      });
     }
+    
+    console.log(`Successfully extracted ${matches.length} matches`);
+    return matches;
+  } catch (error) {
+    console.error("Error in extractMatchesFromHTML:", error);
+    return [];
   }
-  
-  console.log(`Successfully extracted ${matches.length} matches`);
-  return matches;
 }
 
 function extractTeamsFromHTML(html: string): any[] {
   console.log("Extracting teams from HTML");
   
-  // Use DOMParser to parse the HTML
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  
-  if (!doc) {
-    console.error("Failed to parse HTML");
+  try {
+    // Use DOMParser to parse the HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    
+    if (!doc) {
+      console.error("Failed to parse HTML");
+      return [];
+    }
+    
+    const teams = [];
+    
+    // Find all team elements
+    const teamElements = doc.querySelectorAll(".team-template-text a");
+    
+    console.log(`Found ${teamElements.length} team elements`);
+    
+    // Track team names to avoid duplicates
+    const processedTeams = new Set();
+    
+    for (const teamElement of teamElements) {
+      try {
+        // Extract team name
+        const name = teamElement.textContent?.trim() || "";
+        
+        // Skip empty team names and duplicates
+        if (!name || processedTeams.has(name)) continue;
+        processedTeams.add(name);
+        
+        // Try to find logo nearby
+        const parentElement = teamElement.parentElement;
+        const logoElement = parentElement?.querySelector("img");
+        const logo = logoElement?.getAttribute("src") || "";
+        
+        // Try to determine region from context
+        let region = "International";
+        const rowElement = findParentWithClass(teamElement, "wikitable");
+        if (rowElement) {
+          const regionCell = rowElement.querySelector("td:first-child");
+          if (regionCell) {
+            region = regionCell.textContent?.trim() || "International";
+          }
+        }
+        
+        teams.push({
+          name,
+          logo: logo.startsWith("http") ? logo : logo ? `https://liquipedia.net${logo}` : "",
+          region,
+          win_rate: 0.4 + (Math.random() * 0.3), // Generate a reasonable win rate between 0.4 and 0.7
+        });
+      } catch (error) {
+        console.error("Error extracting team:", error);
+      }
+    }
+    
+    console.log(`Successfully extracted ${teams.length} teams`);
+    return teams;
+  } catch (error) {
+    console.error("Error in extractTeamsFromHTML:", error);
     return [];
   }
-  
-  const teams = [];
-  
-  // Find all team elements
-  const teamElements = doc.querySelectorAll(".teamcard");
-  
-  console.log(`Found ${teamElements.length} team elements`);
-  
-  for (const teamElement of teamElements) {
-    // Extract team name
-    const nameElement = teamElement.querySelector(".teamcard-inner .header");
-    const name = nameElement?.textContent?.trim() || "Unknown Team";
-    
-    // Extract team logo
-    const logoElement = teamElement.querySelector(".teamcard-inner .logo img");
-    const logo = logoElement?.getAttribute("src") || "";
-    
-    // Extract team region
-    const regionElement = teamElement.querySelector(".teamcard-inner .region");
-    const region = regionElement?.textContent?.trim() || "International";
-    
-    teams.push({
-      name,
-      logo: logo.startsWith("http") ? logo : `https://liquipedia.net${logo}`,
-      region,
-      win_rate: 0.5 + (Math.random() * 0.3), // We don't have real win rates from the API, so generate something
-    });
+}
+
+function findParentWithClass(element: Element, className: string): Element | null {
+  let current = element;
+  while (current) {
+    if (current.classList && current.classList.contains(className)) {
+      return current;
+    }
+    current = current.parentElement;
+    if (!current) break;
   }
-  
-  console.log(`Successfully extracted ${teams.length} teams`);
-  return teams;
+  return null;
 }
 
 function extractTournamentsFromHTML(html: string): any[] {
   console.log("Extracting tournaments from HTML");
   
-  // Use DOMParser to parse the HTML
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  
-  if (!doc) {
-    console.error("Failed to parse HTML");
+  try {
+    // Use DOMParser to parse the HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    
+    if (!doc) {
+      console.error("Failed to parse HTML");
+      return [];
+    }
+    
+    const tournaments = [];
+    
+    // Track tournament names to avoid duplicates
+    const processedTournaments = new Set();
+    
+    // Find all tournament links
+    const tournamentLinks = doc.querySelectorAll(".league-icon-small");
+    
+    console.log(`Found ${tournamentLinks.length} tournament elements`);
+    
+    for (const tournamentElement of tournamentLinks) {
+      try {
+        // Extract tournament name
+        const name = tournamentElement.getAttribute("title")?.trim() || "";
+        
+        // Skip empty names and duplicates
+        if (!name || processedTournaments.has(name)) continue;
+        processedTournaments.add(name);
+        
+        // Get logo
+        const logoElement = tournamentElement.querySelector("img");
+        const logo = logoElement?.getAttribute("src") || "";
+        
+        // Determine region from name
+        const region = getRegionFromLeague(name);
+        
+        tournaments.push({
+          name,
+          logo: logo.startsWith("http") ? logo : logo ? `https://liquipedia.net${logo}` : "",
+          region,
+        });
+      } catch (error) {
+        console.error("Error extracting tournament:", error);
+      }
+    }
+    
+    // If we found very few tournaments, try another approach
+    if (tournaments.length < 5) {
+      // Look for tournament tables
+      const tournamentRows = doc.querySelectorAll("table.wikitable tr");
+      for (let i = 1; i < tournamentRows.length; i++) { // Skip header row
+        try {
+          const row = tournamentRows[i];
+          const nameCell = row.querySelector("td:nth-child(2)");
+          
+          if (!nameCell) continue;
+          
+          const name = nameCell.textContent?.trim() || "";
+          
+          // Skip empty names and duplicates
+          if (!name || processedTournaments.has(name)) continue;
+          processedTournaments.add(name);
+          
+          // Try to get logo
+          const logoElement = nameCell.querySelector("img");
+          const logo = logoElement?.getAttribute("src") || "";
+          
+          // Get region from first cell
+          const regionCell = row.querySelector("td:first-child");
+          const region = regionCell?.textContent?.trim() || "International";
+          
+          tournaments.push({
+            name,
+            logo: logo.startsWith("http") ? logo : logo ? `https://liquipedia.net${logo}` : "",
+            region,
+          });
+        } catch (error) {
+          console.error("Error extracting tournament from table:", error);
+        }
+      }
+    }
+    
+    console.log(`Successfully extracted ${tournaments.length} tournaments`);
+    return tournaments;
+  } catch (error) {
+    console.error("Error in extractTournamentsFromHTML:", error);
     return [];
   }
-  
-  const tournaments = [];
-  
-  // Find all tournament elements
-  const tournamentElements = doc.querySelectorAll(".tournament-card");
-  
-  console.log(`Found ${tournamentElements.length} tournament elements`);
-  
-  for (const tournamentElement of tournamentElements) {
-    // Extract tournament name
-    const nameElement = tournamentElement.querySelector(".tournament-card-title");
-    const name = nameElement?.textContent?.trim() || "Unknown Tournament";
-    
-    // Extract tournament logo
-    const logoElement = tournamentElement.querySelector(".tournament-card-image img");
-    const logo = logoElement?.getAttribute("src") || "";
-    
-    // Extract tournament region
-    const regionElement = tournamentElement.querySelector(".tournament-card-region");
-    const region = regionElement?.textContent?.trim() || "International";
-    
-    tournaments.push({
-      name,
-      logo: logo.startsWith("http") ? logo : `https://liquipedia.net${logo}`,
-      region,
-    });
-  }
-  
-  console.log(`Successfully extracted ${tournaments.length} tournaments`);
-  return tournaments;
 }

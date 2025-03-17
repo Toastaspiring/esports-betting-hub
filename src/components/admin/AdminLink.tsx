@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 
-interface AdminLinkProps {
+export interface AdminLinkProps {
   href: string;
   label: string;
 }

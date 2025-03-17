@@ -10,7 +10,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 
-interface ImportResultsProps {
+export interface ImportResultsProps {
   importStatus: Record<string, any>;
 }
 
