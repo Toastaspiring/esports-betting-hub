@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import FeaturedMatches from '@/components/FeaturedMatches';
+import LiquipediaMatchesViewer from '@/components/LiquipediaMatchesViewer';
 import UserStats from '@/components/UserStats';
 import { MOCK_MATCHES } from '@/lib/constants';
 import BettingInterface from '@/components/BettingInterface';
@@ -20,13 +20,11 @@ const Index = () => {
   const handleOpenBettingInterface = (match: any) => {
     setSelectedMatch(match);
     setShowBettingInterface(true);
-    // Prevent body scrolling when modal is open
     document.body.style.overflow = 'hidden';
   };
   
   const handleCloseBettingInterface = () => {
     setShowBettingInterface(false);
-    // Restore body scrolling
     document.body.style.overflow = 'auto';
   };
   
@@ -39,120 +37,14 @@ const Index = () => {
         
         <FeaturedMatches />
         
-        {/* Upcoming Events Section */}
-        <section className="py-16">
+        <section className="py-12 bg-gray-50/50 dark:bg-slate-950/50">
           <div className="container px-4 mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-2xl font-display font-bold tracking-tight">
-                  Upcoming Events
-                </h2>
-                <p className="text-muted-foreground mt-1">
-                  Prepare your bets for these upcoming tournaments
-                </p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* LCK Summer Split */}
-              <div className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow group">
-                <div className="relative h-48">
-                  <img
-                    src="https://cdn1.dotesports.com/wp-content/uploads/2020/11/22130940/lck.jpg"
-                    alt="LCK Summer Split"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
-                    <div className="absolute bottom-0 left-0 p-5">
-                      <span className="inline-block px-2 py-1 bg-primary/20 text-xs font-medium rounded-md mb-2">
-                        June 15 - Aug 20
-                      </span>
-                      <h3 className="text-xl font-semibold text-white">LCK Summer Split</h3>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    The most prestigious League of Legends tournament in Korea returns with the top teams battling for glory.
-                  </p>
-                  <a
-                    href="/tournaments/lck-summer"
-                    className="flex items-center text-sm font-medium text-primary"
-                  >
-                    View Tournament
-                    <ArrowRight className="w-4 h-4 ml-1.5" />
-                  </a>
-                </div>
-              </div>
-              
-              {/* LEC Summer Split */}
-              <div className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow group">
-                <div className="relative h-48">
-                  <img
-                    src="https://cdn1.dotesports.com/wp-content/uploads/2020/08/01142835/lec-summer-playoffs.png"
-                    alt="LEC Summer Split"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
-                    <div className="absolute bottom-0 left-0 p-5">
-                      <span className="inline-block px-2 py-1 bg-primary/20 text-xs font-medium rounded-md mb-2">
-                        June 17 - Aug 22
-                      </span>
-                      <h3 className="text-xl font-semibold text-white">LEC Summer Split</h3>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Europe's finest League of Legends teams compete in an action-packed summer tournament.
-                  </p>
-                  <a
-                    href="/tournaments/lec-summer"
-                    className="flex items-center text-sm font-medium text-primary"
-                  >
-                    View Tournament
-                    <ArrowRight className="w-4 h-4 ml-1.5" />
-                  </a>
-                </div>
-              </div>
-              
-              {/* MSI 2023 */}
-              <div className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow group">
-                <div className="relative h-48">
-                  <img
-                    src="https://cdn1.dotesports.com/wp-content/uploads/2023/04/03155301/MSI-2023-format.png"
-                    alt="MSI 2023"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
-                    <div className="absolute bottom-0 left-0 p-5">
-                      <span className="inline-block px-2 py-1 bg-primary/20 text-xs font-medium rounded-md mb-2">
-                        August 30 - Sept 10
-                      </span>
-                      <h3 className="text-xl font-semibold text-white">Mid-Season Invitational</h3>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    The best teams from each region clash in this international tournament showcasing top talent.
-                  </p>
-                  <a
-                    href="/tournaments/msi-2023"
-                    className="flex items-center text-sm font-medium text-primary"
-                  >
-                    View Tournament
-                    <ArrowRight className="w-4 h-4 ml-1.5" />
-                  </a>
-                </div>
-              </div>
-            </div>
+            <LiquipediaMatchesViewer />
           </div>
         </section>
         
         <UserStats />
         
-        {/* How it Works Section */}
         <section className="py-16 bg-secondary">
           <div className="container px-4 mx-auto">
             <div className="text-center max-w-3xl mx-auto mb-12">
@@ -209,7 +101,6 @@ const Index = () => {
         </section>
       </main>
       
-      {/* Footer */}
       <footer className="bg-card/20 border-t border-border py-12">
         <div className="container px-4 mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -317,7 +208,6 @@ const Index = () => {
         </div>
       </footer>
       
-      {/* Betting Interface Modal */}
       {showBettingInterface && (
         <BettingInterface
           match={selectedMatch}
