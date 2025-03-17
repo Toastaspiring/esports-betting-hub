@@ -1,6 +1,6 @@
 ## How can I edit this code?
 
-There are several ways of editing your application.
+There are several ways of editing the application.
 
 you can clone this repo and push changes.
 
