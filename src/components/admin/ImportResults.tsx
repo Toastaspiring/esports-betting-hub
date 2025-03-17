@@ -31,6 +31,21 @@ const ImportResults = ({ importStatus }: ImportResultsProps) => {
             <div key={type} className="rounded-md bg-muted p-4">
               <p className="font-medium text-lg capitalize">{type}: {status.loading ? 'Importing...' : (status.success ? 'Success' : 'Failed')}</p>
               {status.message && <p className="text-sm text-muted-foreground mt-1">{status.message}</p>}
+              
+              {status.imported !== undefined && (
+                <p className="text-sm mt-1">
+                  Imported {status.imported} new {type} out of {status.total} found
+                </p>
+              )}
+              
+              {status.sampleData && (
+                <div className="mt-3 text-xs">
+                  <p className="font-medium mb-1">Sample data:</p>
+                  <pre className="bg-background p-2 rounded overflow-auto max-h-32">{
+                    JSON.stringify(status.sampleData, null, 2)
+                  }</pre>
+                </div>
+              )}
             </div>
           ))}
         </div>

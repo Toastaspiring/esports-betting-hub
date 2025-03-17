@@ -86,22 +86,65 @@ async function callLiquipediaAPI(endpoint: string, params: Record<string, string
 
 async function importMatches(supabase: any) {
   try {
-    // Get upcoming and ongoing matches
-    const data = await callLiquipediaAPI("parse", {
+    // First try upcoming and ongoing matches
+    let data = await callLiquipediaAPI("parse", {
       page: "Liquipedia:Upcoming_and_ongoing_matches",
       action: "parse",
       prop: "text",
     });
 
     // Extract matches from HTML response
-    const htmlContent = data.parse.text['*'];
-    const matches = extractMatchesFromHTML(htmlContent);
+    let htmlContent = data.parse.text['*'];
+    let matches = extractMatchesFromHTML(htmlContent);
     
-    console.log(`Found ${matches.length} matches`);
+    console.log(`Found ${matches.length} matches from upcoming matches page`);
+    
+    // If we didn't find many matches, try also the main tournament page
+    if (matches.length < 10) {
+      // Try also the tournaments page for more matches
+      data = await callLiquipediaAPI("parse", {
+        page: "Portal:Tournaments",
+        action: "parse",
+        prop: "text",
+      });
+      
+      htmlContent = data.parse.text['*'];
+      const tournamentMatches = extractMatchesFromHTML(htmlContent);
+      console.log(`Found ${tournamentMatches.length} additional matches from tournament page`);
+      
+      // Merge the matches, avoiding duplicates
+      const existingMatchIds = new Set(matches.map(m => `${m.teamA.name}-${m.teamB.name}-${m.date}`));
+      for (const match of tournamentMatches) {
+        const matchId = `${match.teamA.name}-${match.teamB.name}-${match.date}`;
+        if (!existingMatchIds.has(matchId)) {
+          matches.push(match);
+          existingMatchIds.add(matchId);
+        }
+      }
+    }
+    
+    console.log(`Total unique matches found: ${matches.length}`);
+    
+    // Log some examples of the extracted matches to verify team names
+    if (matches.length > 0) {
+      console.log("Sample matches extracted:");
+      for (let i = 0; i < Math.min(3, matches.length); i++) {
+        console.log(`Match ${i+1}: ${matches[i].teamA.name} vs ${matches[i].teamB.name} (${matches[i].tournament})`);
+      }
+    }
     
     // Store matches in the database
     let importedCount = 0;
     for (const match of matches) {
+      // Skip if team names are generic or missing
+      if (match.teamA.name === "Unknown Team" || 
+          match.teamB.name === "Unknown Team" ||
+          match.teamA.name === "Team A" ||
+          match.teamB.name === "Team B") {
+        console.log(`Skipping match with generic team names: ${match.teamA.name} vs ${match.teamB.name}`);
+        continue;
+      }
+      
       // First check if we need to create the teams
       let teamA = await getOrCreateTeam(supabase, match.teamA);
       let teamB = await getOrCreateTeam(supabase, match.teamB);
@@ -140,6 +183,7 @@ async function importMatches(supabase: any) {
         console.error(`Error creating match: ${error.message}`);
       } else {
         importedCount++;
+        console.log(`Imported match: ${match.teamA.name} vs ${match.teamB.name}`);
       }
     }
     
@@ -303,6 +347,11 @@ async function importPlayers(supabase: any) {
 
 // Helper functions
 async function getOrCreateLeague(supabase: any, leagueName: string) {
+  // Skip empty league names
+  if (!leagueName || leagueName === "Unknown Tournament") {
+    leagueName = "Other";
+  }
+
   // Check if league exists
   const { data: leagues } = await supabase
     .from('leagues')
@@ -332,6 +381,11 @@ async function getOrCreateLeague(supabase: any, leagueName: string) {
 }
 
 async function getOrCreateTeam(supabase: any, teamInfo: { name: string, logo?: string }) {
+  // Skip empty team names
+  if (!teamInfo.name || teamInfo.name === "Unknown Team" || teamInfo.name === "Team A" || teamInfo.name === "Team B") {
+    throw new Error("Cannot create team with generic/unknown name");
+  }
+
   // Check if team exists
   const { data: teams } = await supabase
     .from('teams')
@@ -416,7 +470,7 @@ function extractMatchesFromHTML(html: string): any[] {
     
     const matches = [];
     
-    // Find all match containers - more specific selector
+    // Find all match containers with infobox_matches_content class
     const matchContainers = doc.querySelectorAll(".infobox_matches_content");
     
     console.log(`Found ${matchContainers.length} match containers`);
@@ -427,16 +481,28 @@ function extractMatchesFromHTML(html: string): any[] {
         const tournamentElement = container.querySelector(".league-icon-small");
         const tournamentName = tournamentElement?.getAttribute("title") || "Unknown Tournament";
         
-        // Find team elements
-        const teamElements = container.querySelectorAll("span.team-template-text a");
+        // Find team elements - more specific selectors to get correct team names
+        const leftTeam = container.querySelector(".team-left");
+        const rightTeam = container.querySelector(".team-right");
         
-        if (teamElements.length >= 2) {
-          const teamAName = teamElements[0]?.textContent?.trim() || "Unknown Team";
-          const teamBName = teamElements[1]?.textContent?.trim() || "Unknown Team";
+        if (leftTeam && rightTeam) {
+          // Get team names from the specific team template text
+          const teamANameEl = leftTeam.querySelector(".team-template-text a");
+          const teamBNameEl = rightTeam.querySelector(".team-template-text a");
+          
+          const teamAName = teamANameEl?.textContent?.trim() || "Unknown Team";
+          const teamBName = teamBNameEl?.textContent?.trim() || "Unknown Team";
+          
+          // Skip matches with generic team names
+          if (teamAName === "Unknown Team" || teamBName === "Unknown Team" ||
+              teamAName === "Team A" || teamBName === "Team B") {
+            console.log(`Skipping match with generic team names: ${teamAName} vs ${teamBName}`);
+            continue;
+          }
           
           // Get team logos
-          const teamALogoElement = container.querySelector(".team-left img");
-          const teamBLogoElement = container.querySelector(".team-right img");
+          const teamALogoElement = leftTeam.querySelector("img");
+          const teamBLogoElement = rightTeam.querySelector("img");
           
           const teamALogo = teamALogoElement?.getAttribute("src") || "";
           const teamBLogo = teamBLogoElement?.getAttribute("src") || "";
@@ -485,14 +551,28 @@ function extractMatchesFromHTML(html: string): any[] {
           
           if (cells.length >= 4) {
             const tournamentName = cells[0].textContent?.trim() || "Unknown Tournament";
-            const teamAName = cells[1].textContent?.trim() || "Unknown Team";
-            const teamBName = cells[2].textContent?.trim() || "Unknown Team";
-            const timeElement = cells[3].querySelector(".timer-object");
             
-            // Skip if no team names found
-            if (teamAName === "Unknown Team" || teamBName === "Unknown Team") {
+            // Try to find team elements with more specific selectors
+            const teamAEl = cells[1].querySelector(".team-template-text a");
+            const teamBEl = cells[2].querySelector(".team-template-text a");
+            
+            const teamAName = teamAEl?.textContent?.trim() || cells[1].textContent?.trim() || "Unknown Team";
+            const teamBName = teamBEl?.textContent?.trim() || cells[2].textContent?.trim() || "Unknown Team";
+            
+            // Skip matches with generic team names
+            if (teamAName === "Unknown Team" || teamBName === "Unknown Team" ||
+                teamAName === "Team A" || teamBName === "Team B") {
               continue;
             }
+            
+            // Get team logos if available
+            const teamALogoElement = cells[1].querySelector("img");
+            const teamBLogoElement = cells[2].querySelector("img");
+            
+            const teamALogo = teamALogoElement?.getAttribute("src") || "";
+            const teamBLogo = teamBLogoElement?.getAttribute("src") || "";
+            
+            const timeElement = cells[3].querySelector(".timer-object");
             
             let matchDate = new Date();
             if (timeElement) {
@@ -502,14 +582,16 @@ function extractMatchesFromHTML(html: string): any[] {
               }
             }
             
+            console.log(`Extracted table match: ${teamAName} vs ${teamBName} | Tournament: ${tournamentName}`);
+            
             matches.push({
               teamA: { 
                 name: teamAName, 
-                logo: "" 
+                logo: teamALogo.startsWith("http") ? teamALogo : teamALogo ? `https://liquipedia.net${teamALogo}` : "" 
               },
               teamB: { 
                 name: teamBName, 
-                logo: "" 
+                logo: teamBLogo.startsWith("http") ? teamBLogo : teamBLogo ? `https://liquipedia.net${teamBLogo}` : "" 
               },
               tournament: tournamentName,
               date: matchDate.toISOString(),
