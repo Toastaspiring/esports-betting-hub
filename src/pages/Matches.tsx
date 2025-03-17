@@ -4,16 +4,18 @@ import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, Globe } from 'lucide-react';
 import MatchCard from '@/components/MatchCard';
 import { fetchMatches } from '@/services/supabaseService';
 import { Button } from '@/components/ui/button';
 import { seedDatabase } from '@/lib/seedDatabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Match } from '@/lib/constants';
+import { importLolEsportsData } from '@/services/scrapeService';
 
 const Matches = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isScrapingLoading, setIsScrapingLoading] = useState(false);
   const { toast } = useToast();
   
   // Properly type the fetchMatches function for TanStack Query
@@ -54,6 +56,36 @@ const Matches = () => {
       });
     }
   };
+
+  const handleScrapeData = async () => {
+    try {
+      setIsScrapingLoading(true);
+      const result = await importLolEsportsData();
+      
+      if (result.success) {
+        toast({
+          title: "Data imported",
+          description: "LoL Esports data has been scraped and added to the database.",
+        });
+        refetch();
+      } else {
+        toast({
+          title: "Import error",
+          description: result.error || "Failed to import data from LoL Esports.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error scraping LoL Esports:", error);
+      toast({
+        title: "Error",
+        description: "Failed to scrape data from LoL Esports. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsScrapingLoading(false);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -83,15 +115,36 @@ const Matches = () => {
               />
             </div>
             
-            {matchesData.length === 0 && (
+            <div className="flex gap-2">
+              {matchesData.length === 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleSeedDatabase}
+                  className="shrink-0"
+                >
+                  Seed Database
+                </Button>
+              )}
+              
               <Button 
                 variant="outline" 
-                onClick={handleSeedDatabase}
-                className="shrink-0"
+                onClick={handleScrapeData}
+                disabled={isScrapingLoading}
+                className="shrink-0 flex items-center gap-2"
               >
-                Seed Database
+                {isScrapingLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4" />
+                    Import from LoL Esports
+                  </>
+                )}
               </Button>
-            )}
+            </div>
           </div>
           
           {/* Error State */}
