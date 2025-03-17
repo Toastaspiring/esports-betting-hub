@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.188.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.36-alpha/deno-dom-wasm.ts";
 
 // Define CORS headers
 const corsHeaders = {
@@ -25,9 +26,9 @@ serve(async (req: Request) => {
     );
 
     // Parse request body or use default parameters
-    const { endpoint = "upcoming_matches", importType } = await req.json().catch(() => ({}));
+    const { importType = "matches" } = await req.json().catch(() => ({}));
 
-    console.log(`Processing ${importType || endpoint} import request`);
+    console.log(`Processing ${importType} import request`);
 
     let data;
     switch (importType) {
@@ -68,9 +69,12 @@ async function callLiquipediaAPI(endpoint: string, params: Record<string, string
     url.searchParams.append(key, value);
   });
 
+  console.log(`API URL: ${url.toString()}`);
+
   const response = await fetch(url.toString(), {
     headers: {
       "User-Agent": USER_AGENT,
+      "Accept-Encoding": "gzip",
     },
   });
 
@@ -83,18 +87,14 @@ async function callLiquipediaAPI(endpoint: string, params: Record<string, string
 
 async function importMatches(supabase: any) {
   // Get upcoming and ongoing matches
-  const data = await callLiquipediaAPI("upcoming_matches", {
+  const data = await callLiquipediaAPI("parse", {
     action: "parse",
     page: "Liquipedia:Upcoming_and_ongoing_matches",
     prop: "text",
   });
 
-  // This is simplified - in reality you'd need to parse the HTML content
-  // from data.parse.text['*'] to extract structured match information
+  // Extract matches from HTML response
   const htmlContent = data.parse.text['*'];
-  
-  // For demonstration, let's extract some basic match info using regex
-  // In a production app, use a proper HTML parser
   const matches = extractMatchesFromHTML(htmlContent);
   
   console.log(`Found ${matches.length} matches`);
@@ -152,25 +152,21 @@ async function importMatches(supabase: any) {
 }
 
 async function importTeams(supabase: any) {
-  // This would fetch teams from Liquipedia
-  // For demonstration, let's import some top teams
-  const topTeams = [
-    { name: 'T1', region: 'LCK', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/78/T1_logo.svg/1200px-T1_logo.svg.png', win_rate: 0.85 },
-    { name: 'Gen.G', region: 'LCK', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Gen.G_logo.svg/1200px-Gen.G_logo.svg.png', win_rate: 0.75 },
-    { name: 'JDG Intelligence', region: 'LPL', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b7/JD_Gaming_logo.svg/1200px-JD_Gaming_logo.svg.png', win_rate: 0.82 },
-    { name: 'Bilibili Gaming', region: 'LPL', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e4/Bilibili_Gaming_logo.svg/1200px-Bilibili_Gaming_logo.svg.png', win_rate: 0.72 },
-    { name: 'G2 Esports', region: 'LEC', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/1/12/Esports_organization_G2_Esports_logo.svg/1200px-Esports_organization_G2_Esports_logo.svg.png', win_rate: 0.78 },
-    { name: 'Fnatic', region: 'LEC', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Esports_organization_Fnatic_logo.svg/1200px-Esports_organization_Fnatic_logo.svg.png', win_rate: 0.65 },
-    { name: 'Cloud9', region: 'LCS', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Cloud9_logo.svg/1200px-Cloud9_logo.svg.png', win_rate: 0.68 },
-    { name: 'Team Liquid', region: 'LCS', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Team_liquid_logo.svg/1200px-Team_liquid_logo.svg.png', win_rate: 0.63 },
-  ];
+  // Fetch team data from Liquipedia
+  const data = await callLiquipediaAPI("parse", {
+    action: "parse",
+    page: "Portal:Teams",
+    prop: "text",
+  });
+
+  const htmlContent = data.parse.text['*'];
+  const teams = extractTeamsFromHTML(htmlContent);
+  
+  console.log(`Found ${teams.length} teams`);
   
   let importedCount = 0;
   
-  for (const team of topTeams) {
-    // Get or create league
-    const league = await getOrCreateLeague(supabase, team.region);
-    
+  for (const team of teams) {
     // Check if team exists
     const { data: existingTeams } = await supabase
       .from('teams')
@@ -183,6 +179,9 @@ async function importTeams(supabase: any) {
       continue;
     }
     
+    // Get or create league
+    const league = await getOrCreateLeague(supabase, team.region || "International");
+    
     // Create team
     const { error } = await supabase
       .from('teams')
@@ -190,7 +189,7 @@ async function importTeams(supabase: any) {
         name: team.name,
         logo: team.logo,
         league_id: league.id,
-        win_rate: team.win_rate
+        win_rate: team.win_rate || 0.5
       });
       
     if (error) {
@@ -202,36 +201,37 @@ async function importTeams(supabase: any) {
   
   return { 
     success: true, 
-    message: `Imported ${importedCount} new teams`,
-    total: topTeams.length,
+    message: `Imported ${importedCount} new teams from Liquipedia`,
+    total: teams.length,
     imported: importedCount
   };
 }
 
 async function importTournaments(supabase: any) {
-  // This would fetch tournaments from Liquipedia
-  // For demonstration, importing major leagues
-  const majorLeagues = [
-    { name: 'LCK', region: 'Korea', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b6/LCK_logo.svg/1200px-LCK_logo.svg.png' },
-    { name: 'LPL', region: 'China', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d9/League_of_Legends_Pro_League_logo.svg/1200px-League_of_Legends_Pro_League_logo.svg.png' },
-    { name: 'LEC', region: 'Europe', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/c7/LEC_2019_Logo.svg/1200px-LEC_2019_Logo.svg.png' },
-    { name: 'LCS', region: 'North America', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/LCS_2023_logo.svg/1200px-LCS_2023_logo.svg.png' },
-    { name: 'Worlds', region: 'International', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/2023_LoL_Esports_World_Championship_logo.svg/1200px-2023_LoL_Esports_World_Championship_logo.svg.png' },
-    { name: 'MSI', region: 'International', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/2024_LoL_Mid-Season_Invitational_logo.svg/1200px-2024_LoL_Mid-Season_Invitational_logo.svg.png' },
-  ];
+  // Fetch tournament data from Liquipedia
+  const data = await callLiquipediaAPI("parse", {
+    action: "parse",
+    page: "Portal:Tournaments",
+    prop: "text",
+  });
+
+  const htmlContent = data.parse.text['*'];
+  const tournaments = extractTournamentsFromHTML(htmlContent);
+  
+  console.log(`Found ${tournaments.length} tournaments`);
   
   let importedCount = 0;
   
-  for (const league of majorLeagues) {
-    // Check if league exists
+  for (const tournament of tournaments) {
+    // Check if tournament exists
     const { data: existingLeagues } = await supabase
       .from('leagues')
       .select('id')
-      .eq('name', league.name)
+      .eq('name', tournament.name)
       .limit(1);
       
     if (existingLeagues && existingLeagues.length > 0) {
-      console.log(`League ${league.name} already exists`);
+      console.log(`Tournament ${tournament.name} already exists`);
       continue;
     }
     
@@ -239,13 +239,13 @@ async function importTournaments(supabase: any) {
     const { error } = await supabase
       .from('leagues')
       .insert({
-        name: league.name,
-        logo: league.logo,
-        region: league.region
+        name: tournament.name,
+        logo: tournament.logo,
+        region: tournament.region || "International"
       });
       
     if (error) {
-      console.error(`Error creating league: ${error.message}`);
+      console.error(`Error creating tournament: ${error.message}`);
     } else {
       importedCount++;
     }
@@ -253,18 +253,18 @@ async function importTournaments(supabase: any) {
   
   return { 
     success: true, 
-    message: `Imported ${importedCount} new leagues/tournaments`,
-    total: majorLeagues.length,
+    message: `Imported ${importedCount} new tournaments from Liquipedia`,
+    total: tournaments.length,
     imported: importedCount
   };
 }
 
 async function importPlayers(supabase: any) {
-  // This would fetch pro players from Liquipedia
-  // In a real implementation, this would parse player pages
+  // We would fetch player data here in a real implementation
+  // Since our database doesn't have a players table yet, we'll return a message
   return { 
-    success: true, 
-    message: "Player import not implemented yet",
+    success: false, 
+    message: "Player import not implemented - requires database schema update",
   };
 }
 
@@ -369,30 +369,160 @@ function calculateOdds(winRate: number): number {
 }
 
 function extractMatchesFromHTML(html: string): any[] {
-  // This is a simplified version - in reality, use a proper HTML parser
-  // For demonstration purposes only
+  console.log("Extracting matches from HTML");
   
-  // Example matches
-  const demoMatches = [
-    {
-      teamA: { name: 'T1', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/78/T1_logo.svg/1200px-T1_logo.svg.png' },
-      teamB: { name: 'Gen.G', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Gen.G_logo.svg/1200px-Gen.G_logo.svg.png' },
-      tournament: 'LCK Summer 2024',
-      date: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-    },
-    {
-      teamA: { name: 'JDG Intelligence', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b7/JD_Gaming_logo.svg/1200px-JD_Gaming_logo.svg.png' },
-      teamB: { name: 'Bilibili Gaming', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e4/Bilibili_Gaming_logo.svg/1200px-Bilibili_Gaming_logo.svg.png' },
-      tournament: 'LPL Summer 2024',
-      date: new Date(Date.now() + 172800000).toISOString(), // Day after tomorrow
-    },
-    {
-      teamA: { name: 'G2 Esports', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/1/12/Esports_organization_G2_Esports_logo.svg/1200px-Esports_organization_G2_Esports_logo.svg.png' },
-      teamB: { name: 'Fnatic', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Esports_organization_Fnatic_logo.svg/1200px-Esports_organization_Fnatic_logo.svg.png' },
-      tournament: 'LEC Summer 2024',
-      date: new Date(Date.now() + 259200000).toISOString(), // 3 days from now
-    },
-  ];
+  // Use DOMParser to parse the HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
   
-  return demoMatches;
+  if (!doc) {
+    console.error("Failed to parse HTML");
+    return [];
+  }
+  
+  const matches = [];
+  
+  // Find all match containers
+  const matchContainers = doc.querySelectorAll(".infobox_matches_content");
+  
+  console.log(`Found ${matchContainers.length} match containers`);
+  
+  for (const container of matchContainers) {
+    // Extract tournament info
+    const tournamentElement = container.querySelector(".league-icon-small");
+    const tournamentName = tournamentElement?.getAttribute("title") || "Unknown Tournament";
+    
+    // Find team elements
+    const teamElements = container.querySelectorAll(".team-template-image");
+    
+    if (teamElements.length >= 2) {
+      const teamAElement = teamElements[0];
+      const teamBElement = teamElements[1];
+      
+      // Get team names
+      const teamAName = teamAElement.getAttribute("title") || "Team A";
+      const teamBName = teamBElement.getAttribute("title") || "Team B";
+      
+      // Get team logos
+      const teamALogoElement = teamAElement.querySelector("img");
+      const teamBLogoElement = teamBElement.querySelector("img");
+      
+      const teamALogo = teamALogoElement?.getAttribute("src") || "";
+      const teamBLogo = teamBLogoElement?.getAttribute("src") || "";
+      
+      // Get date/time
+      const dateElement = container.querySelector(".timer-object");
+      let matchDate = new Date();
+      
+      if (dateElement) {
+        const timestamp = dateElement.getAttribute("data-timestamp");
+        if (timestamp) {
+          matchDate = new Date(parseInt(timestamp) * 1000);
+        }
+      }
+      
+      matches.push({
+        teamA: { 
+          name: teamAName, 
+          logo: teamALogo.startsWith("http") ? teamALogo : `https://liquipedia.net${teamALogo}` 
+        },
+        teamB: { 
+          name: teamBName, 
+          logo: teamBLogo.startsWith("http") ? teamBLogo : `https://liquipedia.net${teamBLogo}` 
+        },
+        tournament: tournamentName,
+        date: matchDate.toISOString(),
+      });
+    }
+  }
+  
+  console.log(`Successfully extracted ${matches.length} matches`);
+  return matches;
+}
+
+function extractTeamsFromHTML(html: string): any[] {
+  console.log("Extracting teams from HTML");
+  
+  // Use DOMParser to parse the HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  
+  if (!doc) {
+    console.error("Failed to parse HTML");
+    return [];
+  }
+  
+  const teams = [];
+  
+  // Find all team elements
+  const teamElements = doc.querySelectorAll(".teamcard");
+  
+  console.log(`Found ${teamElements.length} team elements`);
+  
+  for (const teamElement of teamElements) {
+    // Extract team name
+    const nameElement = teamElement.querySelector(".teamcard-inner .header");
+    const name = nameElement?.textContent?.trim() || "Unknown Team";
+    
+    // Extract team logo
+    const logoElement = teamElement.querySelector(".teamcard-inner .logo img");
+    const logo = logoElement?.getAttribute("src") || "";
+    
+    // Extract team region
+    const regionElement = teamElement.querySelector(".teamcard-inner .region");
+    const region = regionElement?.textContent?.trim() || "International";
+    
+    teams.push({
+      name,
+      logo: logo.startsWith("http") ? logo : `https://liquipedia.net${logo}`,
+      region,
+      win_rate: 0.5 + (Math.random() * 0.3), // We don't have real win rates from the API, so generate something
+    });
+  }
+  
+  console.log(`Successfully extracted ${teams.length} teams`);
+  return teams;
+}
+
+function extractTournamentsFromHTML(html: string): any[] {
+  console.log("Extracting tournaments from HTML");
+  
+  // Use DOMParser to parse the HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  
+  if (!doc) {
+    console.error("Failed to parse HTML");
+    return [];
+  }
+  
+  const tournaments = [];
+  
+  // Find all tournament elements
+  const tournamentElements = doc.querySelectorAll(".tournament-card");
+  
+  console.log(`Found ${tournamentElements.length} tournament elements`);
+  
+  for (const tournamentElement of tournamentElements) {
+    // Extract tournament name
+    const nameElement = tournamentElement.querySelector(".tournament-card-title");
+    const name = nameElement?.textContent?.trim() || "Unknown Tournament";
+    
+    // Extract tournament logo
+    const logoElement = tournamentElement.querySelector(".tournament-card-image img");
+    const logo = logoElement?.getAttribute("src") || "";
+    
+    // Extract tournament region
+    const regionElement = tournamentElement.querySelector(".tournament-card-region");
+    const region = regionElement?.textContent?.trim() || "International";
+    
+    tournaments.push({
+      name,
+      logo: logo.startsWith("http") ? logo : `https://liquipedia.net${logo}`,
+      region,
+    });
+  }
+  
+  console.log(`Successfully extracted ${tournaments.length} tournaments`);
+  return tournaments;
 }
